@@ -1,0 +1,12 @@
+# OS and editor files
+.DS_Store
+*.swp
+*.bak*
+*~
+.idea/
+.vscode/
+
+# Build and cache
+build/
+*.pyc
+__pycache__/

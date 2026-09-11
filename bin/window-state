@@ -1,0 +1,8 @@
+#!/bin/bash
+# Query active window and all open clients for nav-guide plugin
+set -eo pipefail
+
+active=$(hyprctl activewindow -j 2>/dev/null || echo '{}')
+clients=$(hyprctl clients -j 2>/dev/null || echo '[]')
+
+jq -n --argjson a "$active" --argjson c "$clients" '{active: $a, clients: $c}'

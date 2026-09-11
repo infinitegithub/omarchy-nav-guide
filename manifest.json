@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "nav-guide",
+  "name": "Navigation Guide",
+  "version": "1.0.0",
+  "author": "Es Sadik Sanhaji",
+  "license": "MIT",
+  "description": "Context-aware navigation tutor for Omarchy: suggests keybinds based on what windows you have open and where you are",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Navigation Guide",
+    "description": "Contextual navigation shortcuts and learning tips",
+    "category": "Utilities",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}
