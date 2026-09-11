@@ -26,19 +26,15 @@ Instead of displaying a static text cheatsheet, it actively suggests shortcut co
 
 ## 🚀 Quick Install
 
-Install and enable the plugin with one command:
+Install and enable the plugin with a single command:
 
 ```bash
 omarchy plugin add https://github.com/infinitegithub/omarchy-nav-guide.git --enable --yes
 ```
 
-To set `SUPER + K` to open Super+K Alternative:
+That's it! The plugin **automatically takes control of `SUPER + K`** upon launch — zero configuration or manual file editing required.
 
-```bash
-~/.config/omarchy/plugins/nav-guide/bin/register-keybind
-```
-
-> The standard Omarchy keybindings menu is preserved on `SUPER + SHIFT + K` as a fallback.
+> **Tip:** The classic Omarchy keybindings cheatsheet is automatically preserved and available on `SUPER + SHIFT + K`.
 
 ---
 
@@ -52,7 +48,7 @@ To set `SUPER + K` to open Super+K Alternative:
 | `Enter` | Execute selected action |
 | `Tab` | Cycle views |
 | `Esc` | Close window |
-| `SUPER + SHIFT + K` | Standard Omarchy keybindings list |
+| `SUPER + SHIFT + K` | Classic Omarchy keybindings list |
 
 ---
 
