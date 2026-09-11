@@ -107,21 +107,25 @@ Rectangle {
           }
         }
 
-        // Mastery badge pill
+        // Mastery / Usage count pill (always visible)
         Rectangle {
-          visible: root.mastery !== null
           implicitWidth: masteryLabel.implicitWidth + Style.space(8)
           implicitHeight: Style.space(16)
           radius: Style.space(3)
-          color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.12)
+          color: root.usageCount > 0
+            ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.18)
+            : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.08)
 
           Text {
             id: masteryLabel
             anchors.centerIn: parent
-            text: root.mastery ? root.mastery.tag : ""
+            text: root.usageCount > 0
+              ? (root.mastery ? root.mastery.tag : (root.usageCount + "x"))
+              : "0x"
             font.family: Style.font.family
             font.pixelSize: Style.font.caption - 1
-            color: root.accent
+            font.bold: root.usageCount > 0
+            color: root.usageCount > 0 ? root.accent : Qt.darker(root.foreground, 1.3)
           }
         }
       }

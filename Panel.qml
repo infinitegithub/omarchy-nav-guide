@@ -197,7 +197,7 @@ Panel {
     bar: root.bar
     text: root.icon
     slotSize: Style.bar.statusSlot
-    tooltipText: "Navigation Guide (" + root.activeApp.label + ") · " + root.navigatorRank.title
+    tooltipText: "Navigation Guide · " + (root.navigatorRank ? root.navigatorRank.title : "Guide")
     onPressed: root.toggle()
   }
 
@@ -244,7 +244,7 @@ Panel {
             spacing: Style.space(4)
             Layout.leftMargin: Style.space(6)
 
-            // Context Tab
+            // Windows Tab
             Rectangle {
               implicitWidth: contextTabLabel.implicitWidth + Style.space(10)
               implicitHeight: Style.space(22)
@@ -256,7 +256,7 @@ Panel {
               Text {
                 id: contextTabLabel
                 anchors.centerIn: parent
-                text: "🎯 Context"
+                text: "🎯 Windows"
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 font.bold: root.currentTab === "context"
@@ -363,17 +363,6 @@ Panel {
           }
         }
 
-        // Active Window Status Banner
-        ContextHeader {
-          Layout.fillWidth: true
-          categoryLabel: root.activeApp.label
-          categoryIcon: root.activeApp.icon
-          windowTitle: root.rawActive.title || (root.toplevel ? root.toplevel.title : "No active window")
-          workspaceName: (root.rawActive.workspace && root.rawActive.workspace.name) ? String(root.rawActive.workspace.name) : "1"
-          isFloating: root.rawActive.floating === true
-          isFullscreen: root.rawActive.fullscreen !== undefined && root.rawActive.fullscreen !== 0
-        }
-
         // Scrollable Body
         Flickable {
           id: flick
@@ -419,20 +408,23 @@ Panel {
                 }
               }
 
-              Text {
+              Item {
                 visible: root.searchResults.length === 0
                 width: parent.width
-                text: "No shortcuts match \"" + root.searchQuery + "\""
-                font.family: Style.font.family
-                font.pixelSize: Style.font.body
-                color: Qt.darker(Color.popups.text, 1.5)
-                horizontalAlignment: Text.AlignHCenter
-                topPadding: Style.space(16)
+                height: Style.space(40)
+
+                Text {
+                  anchors.centerIn: parent
+                  text: "No shortcuts match \"" + root.searchQuery + "\""
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.body
+                  color: Qt.darker(Color.popups.text, 1.5)
+                }
               }
             }
 
             // -----------------------------------------------------------
-            // VIEW B: SMART CONTEXT GUIDE (DEFAULT)
+            // VIEW B: WINDOW NAVIGATION & CONTROLS (DEFAULT)
             // -----------------------------------------------------------
             Column {
               visible: root.searchQuery === "" && root.currentTab === "context"
@@ -446,7 +438,7 @@ Panel {
                 spacing: Style.space(4)
 
                 PanelSectionHeader {
-                  text: "SWITCH TO RUNNING APPS (" + root.smartNav.openTasks.length + ")"
+                  text: "NAVIGATE BETWEEN OPEN WINDOWS (" + root.smartNav.openTasks.length + ")"
                 }
 
                 Repeater {
@@ -464,53 +456,19 @@ Panel {
                   }
                 }
 
-                PanelSeparator {
-                  width: parent.width
-                  topPadding: Style.space(2)
-                  bottomPadding: Style.space(2)
-                }
+                Item { width: 1; height: Style.space(2) }
+                PanelSeparator { width: parent.width }
+                Item { width: 1; height: Style.space(2) }
               }
 
-              // 2. In-App Navigation / Tabs (if in browser, editor, terminal)
-              Column {
-                visible: root.smartNav.inAppTabs.length > 0
-                width: parent.width
-                spacing: Style.space(4)
-
-                PanelSectionHeader {
-                  text: root.activeApp.label.toUpperCase() + " TAB & IN-APP SHORTCUTS"
-                }
-
-                Repeater {
-                  model: root.smartNav.inAppTabs
-                  delegate: SuggestionCard {
-                    width: parent.width
-                    title: modelData.title
-                    desc: modelData.desc
-                    keyString: modelData.key
-                    icon: modelData.icon
-                    action: modelData.action
-                    badgeText: modelData.badge
-                    usageCount: root.getCountForKey(modelData.key)
-                    onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
-                  }
-                }
-
-                PanelSeparator {
-                  width: parent.width
-                  topPadding: Style.space(2)
-                  bottomPadding: Style.space(2)
-                }
-              }
-
-              // 3. Current Window Controls
+              // 2. Window Tiling & Layout Controls
               Column {
                 visible: root.smartNav.currentWindow.length > 0
                 width: parent.width
                 spacing: Style.space(4)
 
                 PanelSectionHeader {
-                  text: "CURRENT WINDOW CONTROLS"
+                  text: "WINDOW TILING & LAYOUT"
                 }
 
                 Repeater {
@@ -528,14 +486,12 @@ Panel {
                   }
                 }
 
-                PanelSeparator {
-                  width: parent.width
-                  topPadding: Style.space(2)
-                  bottomPadding: Style.space(2)
-                }
+                Item { width: 1; height: Style.space(2) }
+                PanelSeparator { width: parent.width }
+                Item { width: 1; height: Style.space(2) }
               }
 
-              // 4. Quick Launch / Workspaces
+              // 3. Quick Launch / Other Workspaces
               Column {
                 width: parent.width
                 spacing: Style.space(4)
@@ -628,16 +584,18 @@ Panel {
                 }
               }
 
-              Text {
+              Item {
                 visible: root.leaderboardList.length === 0
                 width: parent.width
-                text: "No shortcuts logged yet! Click suggestions or use keybindings to start ranking."
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                color: Qt.darker(Color.popups.text, 1.4)
-                horizontalAlignment: Text.AlignHCenter
-                topPadding: Style.space(12)
-                bottomPadding: Style.space(12)
+                height: Style.space(36)
+
+                Text {
+                  anchors.centerIn: parent
+                  text: "No shortcuts logged yet! Click suggestions to start ranking."
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.caption
+                  color: Qt.darker(Color.popups.text, 1.4)
+                }
               }
 
               PanelSeparator {

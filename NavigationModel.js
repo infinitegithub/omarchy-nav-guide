@@ -130,10 +130,9 @@ function buildSmartNavigation(activeWin, allClients) {
   var clients = Array.isArray(allClients) ? allClients : [];
 
   var sections = {
-    openTasks: [],      // Switch to other running apps
+    openTasks: [],      // Navigate between open windows and workspaces
     currentWindow: [],  // Tiling, floating, split, close
-    inAppTabs: [],      // In-app tab and document switching
-    quickLaunch: []     // New instances or unopened apps
+    quickLaunch: []     // Launch new apps or new instances
   };
 
   var hasTerminal = false;
@@ -160,7 +159,7 @@ function buildSmartNavigation(activeWin, allClients) {
     }
   }
 
-  // 1. SWITCH TO EXISTING OPEN WINDOWS (PRIORITY)
+  // 1. SWITCH TO EXISTING OPEN WINDOWS (TOP PRIORITY)
   for (var s = 0; s < sameWsOthers.length; s++) {
     var item = sameWsOthers[s];
     var rel = calculateRelativeDirection(curAt, item.client.at);
@@ -179,7 +178,7 @@ function buildSmartNavigation(activeWin, allClients) {
       sections.openTasks.push({
         key: rel.swapKey,
         title: "Swap with " + label,
-        desc: "Swap side-by-side position",
+        desc: "Swap position with " + label,
         icon: "󰤉",
         badge: "Swap",
         action: "hyprctl dispatch " + shellQuote("hl.dsp.window.swap({ direction = \"" + rel.hyprDir + "\" })")
@@ -204,7 +203,7 @@ function buildSmartNavigation(activeWin, allClients) {
 
     sections.openTasks.push({
       key: "SUPER + " + ws,
-      title: "Switch to " + oLabel + " (WS " + ws + ")",
+      title: "Switch to " + oLabel + " (Workspace " + ws + ")",
       desc: oTitle,
       icon: other.info.icon,
       badge: "WS " + ws,
@@ -212,27 +211,53 @@ function buildSmartNavigation(activeWin, allClients) {
     });
   }
 
-  // 2. IN-APP TAB / NAVIGATION SHORTCUTS
-  if (curApp.type === "browser") {
-    sections.inAppTabs.push({ key: "Ctrl + Tab", title: "Next Browser Tab", desc: "Cycle to next open tab", icon: "󰖟", badge: "Tab", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + Shift + Tab", title: "Previous Tab", desc: "Cycle to previous tab", icon: "󰖟", badge: "Tab", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + L", title: "Focus Address Bar", desc: "Jump to URL / search input", icon: "󰖟", badge: "URL", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + T", title: "New Tab in Browser", desc: "Open a fresh tab", icon: "󰖟", badge: "New Tab", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + W", title: "Close Tab", desc: "Close current browser tab", icon: "󰅖", badge: "Tab", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + Shift + T", title: "Reopen Closed Tab", desc: "Restore last closed tab", icon: "󰖟", badge: "Tab", action: "" });
-  } else if (curApp.type === "editor") {
-    sections.inAppTabs.push({ key: "Ctrl + PageDown", title: "Next Editor Tab", desc: "Switch to next open file", icon: "󰨞", badge: "Tab", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + PageUp", title: "Previous Editor Tab", desc: "Switch to previous open file", icon: "󰨞", badge: "Tab", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + P", title: "Quick Open File", desc: "Fuzzy search files in project", icon: "󰨞", badge: "Files", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + Shift + P", title: "Command Palette", desc: "Search editor actions", icon: "󰨞", badge: "Action", action: "" });
-  } else if (curApp.type === "terminal") {
-    sections.inAppTabs.push({ key: "SUPER + ALT + RETURN", title: "Launch Tmux Session", desc: "Terminal tabs & splits multiplexer", icon: "󰒍", badge: "Tmux", action: "omarchy-launch-terminal tmux" });
-    sections.inAppTabs.push({ key: "SUPER + CTRL + RETURN", title: "Toggle Herdr Scratchpad", desc: "Slide out persistent terminal", icon: "󰖮", badge: "Scratchpad", action: "omarchy-launch-herdr" });
-    sections.inAppTabs.push({ key: "Ctrl + Shift + V", title: "Paste into Terminal", desc: "Paste from clipboard", icon: "󰅌", badge: "Edit", action: "" });
-    sections.inAppTabs.push({ key: "Ctrl + L", title: "Clear Screen", desc: "Reset terminal view", icon: "󰞷", badge: "Screen", action: "" });
+  // Fast Navigation & Cycling
+  if (clients.length > 1) {
+    sections.openTasks.push({
+      key: "ALT + TAB",
+      title: "Cycle Next Window",
+      desc: "Fast cycle through open windows",
+      icon: "󰹉",
+      badge: "Cycle",
+      action: "hyprctl dispatch 'hl.dsp.window.cycle_next()'"
+    });
+    sections.openTasks.push({
+      key: "SUPER + TAB",
+      title: "Next Workspace",
+      desc: "Jump to next active workspace",
+      icon: "󰁔",
+      badge: "Workspace",
+      action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+    });
+  } else {
+    // Only 1 or 0 windows: show fundamental directional movement
+    sections.openTasks.push({
+      key: "SUPER + Left / H",
+      title: "Focus Left Window",
+      desc: "Move focus to window on the left",
+      icon: "󰁍",
+      badge: "Focus",
+      action: "hyprctl dispatch 'hl.dsp.focus({ direction = \"l\" })'"
+    });
+    sections.openTasks.push({
+      key: "SUPER + Right / L",
+      title: "Focus Right Window",
+      desc: "Move focus to window on the right",
+      icon: "󰁔",
+      badge: "Focus",
+      action: "hyprctl dispatch 'hl.dsp.focus({ direction = \"r\" })'"
+    });
+    sections.openTasks.push({
+      key: "ALT + TAB",
+      title: "Cycle Windows",
+      desc: "Cycle between windows",
+      icon: "󰹉",
+      badge: "Cycle",
+      action: "hyprctl dispatch 'hl.dsp.window.cycle_next()'"
+    });
   }
 
-  // 3. CURRENT WINDOW CONTROLS
+  // 2. WINDOW TILING & LAYOUT CONTROLS
   if (activeWin && activeWin.address) {
     var isFloat = activeWin.floating === true;
     var isFull = (activeWin.fullscreen !== undefined && activeWin.fullscreen !== 0);
@@ -240,7 +265,7 @@ function buildSmartNavigation(activeWin, allClients) {
     sections.currentWindow.push({
       key: "SUPER + T",
       title: isFloat ? "Tile Window Back" : "Float Window",
-      desc: isFloat ? "Return to automatic tiling grid" : "Float freely over windows",
+      desc: isFloat ? "Snap back to auto-tiling grid" : "Float freely over other windows",
       icon: "󰉦",
       badge: isFloat ? "Floating" : "Tiled",
       action: "hyprctl dispatch " + shellQuote("hl.dsp.window.float({ action = \"toggle\" })")
@@ -257,7 +282,7 @@ function buildSmartNavigation(activeWin, allClients) {
 
     sections.currentWindow.push({
       key: "SUPER + F",
-      title: isFull ? "Exit Fullscreen" : "Fullscreen Focus",
+      title: isFull ? "Exit Fullscreen" : "Toggle Fullscreen",
       desc: isFull ? "Restore tiled view" : "Distraction-free fullscreen",
       icon: "󰊓",
       badge: "View",
@@ -265,25 +290,16 @@ function buildSmartNavigation(activeWin, allClients) {
     });
 
     sections.currentWindow.push({
-      key: "SUPER + O",
-      title: "Pop Out & Pin (PIP)",
-      desc: "Float and pin across all workspaces",
-      icon: "󰐃",
-      badge: "Pin",
-      action: "omarchy-hyprland-window-pop"
-    });
-
-    sections.currentWindow.push({
       key: "SUPER + W",
-      title: "Close This Window",
-      desc: "Safely close active window",
+      title: "Close Focused Window",
+      desc: "Close the currently active window",
       icon: "󰅖",
       badge: "Close",
       action: "hyprctl dispatch " + shellQuote("hl.dsp.window.close()")
     });
   }
 
-  // 4. QUICK LAUNCH / UNOPENED APPS (OR NEW INSTANCES)
+  // 3. QUICK LAUNCH / UNOPENED APPS (OR NEW INSTANCES)
   sections.quickLaunch.push({
     key: "SUPER + RETURN",
     title: hasTerminal ? "Open New Terminal" : "Launch Terminal",
@@ -305,7 +321,7 @@ function buildSmartNavigation(activeWin, allClients) {
   sections.quickLaunch.push({
     key: "SUPER + SHIFT + F",
     title: "Launch File Manager",
-    desc: "Browse storage and documents",
+    desc: "Browse files and directories",
     icon: "󰉋",
     badge: "Launch",
     action: "omarchy-launch-file-manager"
@@ -314,7 +330,7 @@ function buildSmartNavigation(activeWin, allClients) {
   sections.quickLaunch.push({
     key: "SUPER + SPACE",
     title: "Open Omarchy Menu",
-    desc: "Search apps, power, and workflows",
+    desc: "Application launcher and search",
     icon: "󰍜",
     badge: "Menu",
     action: "omarchy-menu toggle"
@@ -329,11 +345,11 @@ function buildSmartNavigation(activeWin, allClients) {
 
 function getMasteryTier(count) {
   var c = Number(count) || 0;
-  if (c >= 30) return { tier: "mastered", label: "Mastered", icon: "👑", count: c, tag: "👑 Mastered (" + c + "x)" };
+  if (c >= 30) return { tier: "mastered", label: "Mastered", icon: "👑", count: c, tag: "👑 " + c + "x" };
   if (c >= 15) return { tier: "proficient", label: "Proficient", icon: "🏆", count: c, tag: "🏆 " + c + "x" };
   if (c >= 5)  return { tier: "familiar", label: "Familiar", icon: "⚡", count: c, tag: "⚡ " + c + "x" };
   if (c >= 1)  return { tier: "learning", label: "Learning", icon: "🌱", count: c, tag: "🌱 " + c + "x" };
-  return null;
+  return { tier: "untried", label: "Untried", icon: "·", count: 0, tag: "0x" };
 }
 
 function getNavigatorRank(totalActions) {
