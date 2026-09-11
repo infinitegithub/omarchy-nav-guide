@@ -1,0 +1,41 @@
+#!/bin/bash
+# Stats manager for nav-guide plugin: records usage, tracks mastery, ranks commands
+set -eo pipefail
+
+STATE_DIR="$HOME/.local/state/omarchy"
+STATS_FILE="$STATE_DIR/nav-guide-stats.json"
+
+mkdir -p "$STATE_DIR"
+
+if [[ ! -f "$STATS_FILE" ]]; then
+  echo '{"totalActions":0,"stats":{}}' > "$STATS_FILE"
+fi
+
+case "${1:-get}" in
+  get)
+    cat "$STATS_FILE"
+    ;;
+  record)
+    key="${2:-}"
+    if [[ -z "$key" ]]; then
+      echo "Usage: stats-manager record <key>" >&2
+      exit 1
+    fi
+    now=$(date +%s)000
+    tmp_file="${STATS_FILE}.tmp.$$"
+    jq --arg k "$key" --argjson t "$now" '
+      .totalActions = ((.totalActions // 0) + 1)
+      | .stats[$k].count = (((.stats[$k].count) // 0) + 1)
+      | .stats[$k].lastUsed = $t
+    ' "$STATS_FILE" > "$tmp_file" && mv "$tmp_file" "$STATS_FILE"
+    cat "$STATS_FILE"
+    ;;
+  reset)
+    echo '{"totalActions":0,"stats":{}}' > "$STATS_FILE"
+    cat "$STATS_FILE"
+    ;;
+  *)
+    echo "Usage: stats-manager <get|record <key>|reset>" >&2
+    exit 1
+    ;;
+esac

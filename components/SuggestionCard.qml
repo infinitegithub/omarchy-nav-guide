@@ -12,6 +12,9 @@ Rectangle {
   property string icon: "󰌌"
   property string badgeText: ""
   property string action: ""
+  property int usageCount: 0
+
+  readonly property var mastery: NavModel.getMasteryTier(root.usageCount)
 
   property color foreground: Color.popups.text
   property color accent: Color.accent
@@ -83,7 +86,7 @@ Rectangle {
           elide: Text.ElideRight
         }
 
-        // Badge pill
+        // Primary badge pill
         Rectangle {
           visible: root.badgeText !== ""
           implicitWidth: badgeLabel.implicitWidth + Style.space(8)
@@ -101,6 +104,24 @@ Rectangle {
             font.pixelSize: Style.font.caption - 1
             font.bold: true
             color: root.badgeText.indexOf("Switch") !== -1 ? root.accent : root.foreground
+          }
+        }
+
+        // Mastery badge pill
+        Rectangle {
+          visible: root.mastery !== null
+          implicitWidth: masteryLabel.implicitWidth + Style.space(8)
+          implicitHeight: Style.space(16)
+          radius: Style.space(3)
+          color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.12)
+
+          Text {
+            id: masteryLabel
+            anchors.centerIn: parent
+            text: root.mastery ? root.mastery.tag : ""
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption - 1
+            color: root.accent
           }
         }
       }

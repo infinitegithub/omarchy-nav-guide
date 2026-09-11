@@ -32,15 +32,15 @@ Panel {
   readonly property var toplevel: ToplevelManager.activeToplevel
   property var rawActive: ({})
   property var rawClients: []
+  property var rawStats: ({ totalActions: 0, stats: {} })
 
-  property string currentTab: "context" // "context" | "all"
+  property string currentTab: "context" // "context" | "all" | "mastery"
   property string searchQuery: ""
 
-  // Refresh active window and all client windows
-  function refreshState() {
-    if (!stateProc.running) {
-      stateProc.running = true
-    }
+  // Refresh active window, all clients, and stats
+  function refreshAll() {
+    if (!stateProc.running) stateProc.running = true
+    if (!statsProc.running) statsProc.running = true
   }
 
   Process {
@@ -61,11 +61,52 @@ Panel {
     }
   }
 
+  Process {
+    id: statsProc
+    command: [root.pluginDir + "/bin/stats-manager", "get"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: function(text) {
+        try {
+          var res = JSON.parse(text)
+          root.rawStats = res || { totalActions: 0, stats: {} }
+        } catch (e) {}
+      }
+    }
+  }
+
+  Process {
+    id: recordProc
+    property string pendingKey: ""
+    command: [root.pluginDir + "/bin/stats-manager", "record", pendingKey]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: function(text) {
+        try {
+          var res = JSON.parse(text)
+          root.rawStats = res || root.rawStats
+        } catch (e) {}
+      }
+    }
+  }
+
+  function recordAction(key) {
+    if (!key) return
+    recordProc.pendingKey = key
+    recordProc.running = true
+  }
+
+  function getCountForKey(key) {
+    if (!root.rawStats || !root.rawStats.stats) return 0
+    var item = root.rawStats.stats[key]
+    return item ? (Number(item.count) || 0) : 0
+  }
+
   // Update whenever Wayland toplevel changes or panel opens
-  onToplevelChanged: Qt.callLater(refreshState)
+  onToplevelChanged: Qt.callLater(refreshAll)
   onOpenedChanged: {
     if (opened) {
-      refreshState()
+      refreshAll()
       searchField.text = ""
       root.searchQuery = ""
     }
@@ -75,7 +116,7 @@ Panel {
     interval: 2500
     running: true
     repeat: true
-    onTriggered: root.refreshState()
+    onTriggered: root.refreshAll()
   }
 
   // App info for active window
@@ -88,6 +129,19 @@ Panel {
   readonly property var smartNav: NavModel.buildSmartNavigation(
     root.rawActive,
     root.rawClients
+  )
+
+  // Mastery and Leaderboard models
+  readonly property var navigatorRank: NavModel.getNavigatorRank(
+    root.rawStats ? root.rawStats.totalActions : 0
+  )
+  readonly property var leaderboardList: NavModel.getLeaderboard(
+    root.rawStats ? root.rawStats.stats : {},
+    TipCatalog.allShortcuts
+  )
+  readonly property var discoverList: NavModel.getDiscoverNext(
+    root.rawStats ? root.rawStats.stats : {},
+    TipCatalog.allShortcuts
   )
 
   // Filtered search list across all shortcuts
@@ -110,9 +164,9 @@ Panel {
   readonly property var searchResults: filterShortcuts(root.searchQuery)
 
   // Reliable action execution:
-  // Dismisses popup panel first, then executes command after 50ms so compositor
-  // restores focus to client window and dispatchers execute without layer-shell interception.
-  function executeAction(cmd) {
+  // Dismisses popup panel first, logs the key to stats, then executes after 50ms
+  function executeAction(cmd, key) {
+    if (key) root.recordAction(key)
     if (!cmd) return
     root.close()
     actionTimer.pendingCmd = cmd
@@ -143,7 +197,7 @@ Panel {
     bar: root.bar
     text: root.icon
     slotSize: Style.bar.statusSlot
-    tooltipText: "Navigation Guide (" + root.activeApp.label + ")"
+    tooltipText: "Navigation Guide (" + root.activeApp.label + ") · " + root.navigatorRank.title
     onPressed: root.toggle()
   }
 
@@ -156,8 +210,8 @@ Panel {
     open: root.opened
     focusTarget: keyCatcher
 
-    contentWidth: panel.fittedContentWidth(Style.space(480))
-    contentHeight: panel.fittedContentHeight(Style.space(560), 640)
+    contentWidth: panel.fittedContentWidth(Style.space(500))
+    contentHeight: panel.fittedContentHeight(Style.space(580), 660)
 
     PanelKeyCatcher {
       id: keyCatcher
@@ -188,11 +242,11 @@ Panel {
           // Tab Switcher Pills
           Row {
             spacing: Style.space(4)
-            Layout.leftMargin: Style.space(8)
+            Layout.leftMargin: Style.space(6)
 
             // Context Tab
             Rectangle {
-              implicitWidth: contextTabLabel.implicitWidth + Style.space(12)
+              implicitWidth: contextTabLabel.implicitWidth + Style.space(10)
               implicitHeight: Style.space(22)
               radius: Style.space(4)
               color: root.currentTab === "context" && root.searchQuery === ""
@@ -202,7 +256,7 @@ Panel {
               Text {
                 id: contextTabLabel
                 anchors.centerIn: parent
-                text: "🎯 Context Guide"
+                text: "🎯 Context"
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 font.bold: root.currentTab === "context"
@@ -222,7 +276,7 @@ Panel {
 
             // All Keybinds Tab
             Rectangle {
-              implicitWidth: allTabLabel.implicitWidth + Style.space(12)
+              implicitWidth: allTabLabel.implicitWidth + Style.space(10)
               implicitHeight: Style.space(22)
               radius: Style.space(4)
               color: root.currentTab === "all" && root.searchQuery === ""
@@ -232,7 +286,7 @@ Panel {
               Text {
                 id: allTabLabel
                 anchors.centerIn: parent
-                text: "📋 All Keybinds"
+                text: "📋 All Keys"
                 font.family: Style.font.family
                 font.pixelSize: Style.font.caption
                 font.bold: root.currentTab === "all"
@@ -244,6 +298,36 @@ Panel {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                   root.currentTab = "all"
+                  searchField.text = ""
+                  root.searchQuery = ""
+                }
+              }
+            }
+
+            // Mastery & Stats Tab
+            Rectangle {
+              implicitWidth: masteryTabLabel.implicitWidth + Style.space(10)
+              implicitHeight: Style.space(22)
+              radius: Style.space(4)
+              color: root.currentTab === "mastery" && root.searchQuery === ""
+                ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.22)
+                : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+              Text {
+                id: masteryTabLabel
+                anchors.centerIn: parent
+                text: "🏆 Mastery"
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.bold: root.currentTab === "mastery"
+                color: root.currentTab === "mastery" && root.searchQuery === "" ? Color.accent : Color.foreground
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  root.currentTab = "mastery"
                   searchField.text = ""
                   root.searchQuery = ""
                 }
@@ -330,7 +414,8 @@ Panel {
                   icon: modelData.icon
                   action: modelData.action
                   badgeText: modelData.category
-                  onTriggered: function(cmd) { root.executeAction(cmd) }
+                  usageCount: root.getCountForKey(modelData.key)
+                  onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
                 }
               }
 
@@ -374,7 +459,8 @@ Panel {
                     icon: modelData.icon
                     action: modelData.action
                     badgeText: modelData.badge
-                    onTriggered: function(cmd) { root.executeAction(cmd) }
+                    usageCount: root.getCountForKey(modelData.key)
+                    onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
                   }
                 }
 
@@ -405,7 +491,8 @@ Panel {
                     icon: modelData.icon
                     action: modelData.action
                     badgeText: modelData.badge
-                    onTriggered: function(cmd) { root.executeAction(cmd) }
+                    usageCount: root.getCountForKey(modelData.key)
+                    onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
                   }
                 }
 
@@ -436,7 +523,8 @@ Panel {
                     icon: modelData.icon
                     action: modelData.action
                     badgeText: modelData.badge
-                    onTriggered: function(cmd) { root.executeAction(cmd) }
+                    usageCount: root.getCountForKey(modelData.key)
+                    onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
                   }
                 }
 
@@ -466,7 +554,8 @@ Panel {
                     icon: modelData.icon
                     action: modelData.action
                     badgeText: modelData.badge
-                    onTriggered: function(cmd) { root.executeAction(cmd) }
+                    usageCount: root.getCountForKey(modelData.key)
+                    onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
                   }
                 }
               }
@@ -494,7 +583,84 @@ Panel {
                   icon: modelData.icon
                   action: modelData.action
                   badgeText: modelData.category
-                  onTriggered: function(cmd) { root.executeAction(cmd) }
+                  usageCount: root.getCountForKey(modelData.key)
+                  onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
+                }
+              }
+            }
+
+            // -----------------------------------------------------------
+            // VIEW D: MASTERY & USAGE STATS
+            // -----------------------------------------------------------
+            Column {
+              visible: root.searchQuery === "" && root.currentTab === "mastery"
+              width: parent.width
+              spacing: Style.space(8)
+
+              // Navigator Level Card
+              MasteryCard {
+                width: parent.width
+                rank: root.navigatorRank
+                totalActions: root.rawStats ? (root.rawStats.totalActions || 0) : 0
+              }
+
+              PanelSeparator {
+                width: parent.width
+              }
+
+              // Leaderboard: Most Used Shortcuts
+              PanelSectionHeader {
+                text: "MOST USED SHORTCUTS (LEADERBOARD)"
+              }
+
+              Repeater {
+                model: root.leaderboardList
+                delegate: SuggestionCard {
+                  width: parent.width
+                  title: (index === 0 ? "🥇 " : (index === 1 ? "🥈 " : (index === 2 ? "🥉 " : (index + 1) + ". "))) + modelData.desc
+                  desc: modelData.tier ? modelData.tier.tag : (modelData.count + " uses")
+                  keyString: modelData.key
+                  icon: modelData.icon
+                  action: modelData.action
+                  badgeText: modelData.tier ? modelData.tier.label : "Used"
+                  usageCount: modelData.count
+                  onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
+                }
+              }
+
+              Text {
+                visible: root.leaderboardList.length === 0
+                width: parent.width
+                text: "No shortcuts logged yet! Click suggestions or use keybindings to start ranking."
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                color: Qt.darker(Color.popups.text, 1.4)
+                horizontalAlignment: Text.AlignHCenter
+                topPadding: Style.space(12)
+                bottomPadding: Style.space(12)
+              }
+
+              PanelSeparator {
+                width: parent.width
+              }
+
+              // Discover Next: Untried / Underused Recommendations
+              PanelSectionHeader {
+                text: "DISCOVER NEXT (RECOMMENDED TO MASTER)"
+              }
+
+              Repeater {
+                model: root.discoverList
+                delegate: SuggestionCard {
+                  width: parent.width
+                  title: modelData.desc
+                  desc: modelData.count === 0 ? "Untried · Expand your keyboard mastery" : ("Used only " + modelData.count + " times")
+                  keyString: modelData.key
+                  icon: modelData.icon
+                  action: modelData.action
+                  badgeText: modelData.count === 0 ? "Untried" : "Practice"
+                  usageCount: modelData.count
+                  onTriggered: function(cmd) { root.executeAction(cmd, modelData.key) }
                 }
               }
             }

@@ -160,10 +160,7 @@ function buildSmartNavigation(activeWin, allClients) {
     }
   }
 
-  // -------------------------------------------------------------
   // 1. SWITCH TO EXISTING OPEN WINDOWS (PRIORITY)
-  // -------------------------------------------------------------
-  // Same workspace (side-by-side)
   for (var s = 0; s < sameWsOthers.length; s++) {
     var item = sameWsOthers[s];
     var rel = calculateRelativeDirection(curAt, item.client.at);
@@ -199,7 +196,6 @@ function buildSmartNavigation(activeWin, allClients) {
     }
   }
 
-  // Other workspaces
   for (var o = 0; o < otherWsOthers.length; o++) {
     var other = otherWsOthers[o];
     var ws = String(other.client.workspace ? other.client.workspace.name : "");
@@ -216,9 +212,7 @@ function buildSmartNavigation(activeWin, allClients) {
     });
   }
 
-  // -------------------------------------------------------------
   // 2. IN-APP TAB / NAVIGATION SHORTCUTS
-  // -------------------------------------------------------------
   if (curApp.type === "browser") {
     sections.inAppTabs.push({ key: "Ctrl + Tab", title: "Next Browser Tab", desc: "Cycle to next open tab", icon: "󰖟", badge: "Tab", action: "" });
     sections.inAppTabs.push({ key: "Ctrl + Shift + Tab", title: "Previous Tab", desc: "Cycle to previous tab", icon: "󰖟", badge: "Tab", action: "" });
@@ -238,9 +232,7 @@ function buildSmartNavigation(activeWin, allClients) {
     sections.inAppTabs.push({ key: "Ctrl + L", title: "Clear Screen", desc: "Reset terminal view", icon: "󰞷", badge: "Screen", action: "" });
   }
 
-  // -------------------------------------------------------------
   // 3. CURRENT WINDOW CONTROLS
-  // -------------------------------------------------------------
   if (activeWin && activeWin.address) {
     var isFloat = activeWin.floating === true;
     var isFull = (activeWin.fullscreen !== undefined && activeWin.fullscreen !== 0);
@@ -291,10 +283,7 @@ function buildSmartNavigation(activeWin, allClients) {
     });
   }
 
-  // -------------------------------------------------------------
   // 4. QUICK LAUNCH / UNOPENED APPS (OR NEW INSTANCES)
-  // -------------------------------------------------------------
-  // If not running: primary launch. If running: new instance.
   sections.quickLaunch.push({
     key: "SUPER + RETURN",
     title: hasTerminal ? "Open New Terminal" : "Launch Terminal",
@@ -332,6 +321,131 @@ function buildSmartNavigation(activeWin, allClients) {
   });
 
   return sections;
+}
+
+// -------------------------------------------------------------
+// MASTERY & STATS RANKING SYSTEM
+// -------------------------------------------------------------
+
+function getMasteryTier(count) {
+  var c = Number(count) || 0;
+  if (c >= 30) return { tier: "mastered", label: "Mastered", icon: "👑", count: c, tag: "👑 Mastered (" + c + "x)" };
+  if (c >= 15) return { tier: "proficient", label: "Proficient", icon: "🏆", count: c, tag: "🏆 " + c + "x" };
+  if (c >= 5)  return { tier: "familiar", label: "Familiar", icon: "⚡", count: c, tag: "⚡ " + c + "x" };
+  if (c >= 1)  return { tier: "learning", label: "Learning", icon: "🌱", count: c, tag: "🌱 " + c + "x" };
+  return null;
+}
+
+function getNavigatorRank(totalActions) {
+  var total = Number(totalActions) || 0;
+  if (total < 25) {
+    return {
+      title: "Explorer",
+      icon: "🌱",
+      level: 1,
+      current: total,
+      max: 25,
+      percent: Math.min(1.0, total / 25),
+      nextTitle: "Wayfinder"
+    };
+  }
+  if (total < 75) {
+    return {
+      title: "Wayfinder",
+      icon: "⚡",
+      level: 2,
+      current: total,
+      max: 75,
+      percent: Math.min(1.0, (total - 25) / 50),
+      nextTitle: "Keyboard Ace"
+    };
+  }
+  if (total < 150) {
+    return {
+      title: "Keyboard Ace",
+      icon: "🎯",
+      level: 3,
+      current: total,
+      max: 150,
+      percent: Math.min(1.0, (total - 75) / 75),
+      nextTitle: "Tiling Ninja"
+    };
+  }
+  if (total < 300) {
+    return {
+      title: "Tiling Ninja",
+      icon: "🥷",
+      level: 4,
+      current: total,
+      max: 300,
+      percent: Math.min(1.0, (total - 150) / 150),
+      nextTitle: "Omarchy Grandmaster"
+    };
+  }
+  return {
+    title: "Omarchy Grandmaster",
+    icon: "👑",
+    level: 5,
+    current: total,
+    max: total,
+    percent: 1.0,
+    nextTitle: "Legendary"
+  };
+}
+
+function getLeaderboard(statsMap, allCatalog) {
+  var catalog = Array.isArray(allCatalog) ? allCatalog : [];
+  var map = (statsMap && typeof statsMap === "object") ? statsMap : {};
+
+  var list = [];
+  for (var i = 0; i < catalog.length; i++) {
+    var item = catalog[i];
+    var stat = map[item.key];
+    var count = stat ? (Number(stat.count) || 0) : 0;
+    if (count > 0) {
+      list.push({
+        key: item.key,
+        desc: item.desc,
+        icon: item.icon,
+        category: item.category,
+        action: item.action,
+        count: count,
+        tier: getMasteryTier(count)
+      });
+    }
+  }
+
+  list.sort(function(a, b) {
+    return b.count - a.count;
+  });
+
+  return list;
+}
+
+function getDiscoverNext(statsMap, allCatalog) {
+  var catalog = Array.isArray(allCatalog) ? allCatalog : [];
+  var map = (statsMap && typeof statsMap === "object") ? statsMap : {};
+
+  // Find high value shortcuts with lowest usage
+  var candidates = [];
+  for (var i = 0; i < catalog.length; i++) {
+    var item = catalog[i];
+    var stat = map[item.key];
+    var count = stat ? (Number(stat.count) || 0) : 0;
+    if (count < 5) {
+      candidates.push({
+        key: item.key,
+        desc: item.desc,
+        icon: item.icon,
+        category: item.category,
+        action: item.action,
+        count: count
+      });
+    }
+  }
+
+  // Pick up to 4 untried candidates
+  return candidates.slice(0, 4);
 }
 
 function shellQuote(s) {
