@@ -345,92 +345,175 @@ function buildSmartNavigation(activeWin, allClients) {
 
 function getMasteryTier(count) {
   var c = Number(count) || 0;
-  if (c >= 30) return { tier: "mastered", label: "Mastered", icon: "👑", count: c, tag: "👑 " + c + "x" };
+  if (c >= 40) return { tier: "mastered", label: "Mastered", icon: "👑", count: c, tag: "👑 " + c + "x" };
   if (c >= 15) return { tier: "proficient", label: "Proficient", icon: "🏆", count: c, tag: "🏆 " + c + "x" };
   if (c >= 5)  return { tier: "familiar", label: "Familiar", icon: "⚡", count: c, tag: "⚡ " + c + "x" };
   if (c >= 1)  return { tier: "learning", label: "Learning", icon: "🌱", count: c, tag: "🌱 " + c + "x" };
   return { tier: "untried", label: "Untried", icon: "·", count: 0, tag: "0x" };
 }
 
-function getNavigatorRank(totalActions) {
+function formatTimeAgo(timestampMs) {
+  if (!timestampMs) return "";
+  var diff = Math.max(0, Date.now() - Number(timestampMs));
+  var sec = Math.floor(diff / 1000);
+  if (sec < 45) return "Just now";
+  var min = Math.floor(sec / 60);
+  if (min < 60) return min + "m ago";
+  var hr = Math.floor(min / 60);
+  if (hr < 24) return hr + "h ago";
+  var days = Math.floor(hr / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 30) return days + "d ago";
+  return "Past";
+}
+
+function getNavigatorRank(totalActions, streak) {
   var total = Number(totalActions) || 0;
-  if (total < 25) {
+  var s = Number(streak) || 1;
+
+  if (total < 15) {
     return {
-      title: "Explorer",
+      title: "Novice Tiler",
       icon: "🌱",
       level: 1,
       current: total,
-      max: 25,
-      percent: Math.min(1.0, total / 25),
-      nextTitle: "Wayfinder"
+      max: 15,
+      percent: Math.min(1.0, total / 15),
+      nextTitle: "Keyboard Apprentice",
+      streak: s
     };
   }
-  if (total < 75) {
+  if (total < 40) {
     return {
-      title: "Wayfinder",
+      title: "Keyboard Apprentice",
       icon: "⚡",
       level: 2,
       current: total,
-      max: 75,
-      percent: Math.min(1.0, (total - 25) / 50),
-      nextTitle: "Keyboard Ace"
+      max: 40,
+      percent: Math.min(1.0, (total - 15) / 25),
+      nextTitle: "Window Operator",
+      streak: s
     };
   }
-  if (total < 150) {
+  if (total < 90) {
     return {
-      title: "Keyboard Ace",
+      title: "Window Operator",
       icon: "🎯",
       level: 3,
       current: total,
-      max: 150,
-      percent: Math.min(1.0, (total - 75) / 75),
-      nextTitle: "Tiling Ninja"
+      max: 90,
+      percent: Math.min(1.0, (total - 40) / 50),
+      nextTitle: "Tiling Specialist",
+      streak: s
     };
   }
-  if (total < 300) {
+  if (total < 180) {
     return {
-      title: "Tiling Ninja",
+      title: "Tiling Specialist",
       icon: "🥷",
       level: 4,
       current: total,
-      max: 300,
-      percent: Math.min(1.0, (total - 150) / 150),
-      nextTitle: "Omarchy Grandmaster"
+      max: 180,
+      percent: Math.min(1.0, (total - 90) / 90),
+      nextTitle: "Desktop Master",
+      streak: s
+    };
+  }
+  if (total < 350) {
+    return {
+      title: "Desktop Master",
+      icon: "🏆",
+      level: 5,
+      current: total,
+      max: 350,
+      percent: Math.min(1.0, (total - 180) / 170),
+      nextTitle: "Omarchy Grandmaster",
+      streak: s
     };
   }
   return {
     title: "Omarchy Grandmaster",
     icon: "👑",
-    level: 5,
+    level: 6,
     current: total,
-    max: total,
+    max: Math.max(total, 500),
     percent: 1.0,
-    nextTitle: "Legendary"
+    nextTitle: "Keyboard Legend",
+    streak: s
   };
+}
+
+function normalizeKey(k) {
+  return String(k || "").replace(/\s+/g, " ").trim().toUpperCase();
+}
+
+function synthesizeKeyDesc(key) {
+  var k = normalizeKey(key);
+  if (k === "SUPER + RETURN" || k === "SUPER + ENTER") return "Launch Terminal";
+  if (k === "SUPER + B") return "Launch Browser";
+  if (k === "SUPER + E") return "File Manager";
+  if (k === "SUPER + W") return "Close Window";
+  if (k === "SUPER + F") return "Full Screen";
+  if (k === "SUPER + ALT + F") return "Full Width";
+  if (k === "SUPER + T") return "Toggle Floating";
+  if (k === "SUPER + J") return "Toggle Split";
+  if (k === "SUPER + K") return "Navigation Guide HUD";
+  if (k === "SUPER + SHIFT + K") return "Classic Keybindings Menu";
+  if (k === "SUPER + SHIFT + BACKSPACE") return "Toggle Window Gaps";
+  if (k.indexOf("SUPER + CODE:1") !== -1 || k.indexOf("SUPER + 1") !== -1) return "Switch to Workspace 1";
+  if (k.indexOf("SUPER + CODE:11") !== -1 || k.indexOf("SUPER + 2") !== -1) return "Switch to Workspace 2";
+  if (k.indexOf("SUPER + CODE:12") !== -1 || k.indexOf("SUPER + 3") !== -1) return "Switch to Workspace 3";
+  if (k.indexOf("SUPER + LEFT") !== -1) return "Focus Left Window";
+  if (k.indexOf("SUPER + RIGHT") !== -1) return "Focus Right Window";
+  if (k.indexOf("SUPER + UP") !== -1) return "Focus Above Window";
+  if (k.indexOf("SUPER + DOWN") !== -1) return "Focus Below Window";
+  if (k === "ALT + TAB") return "Focus Next Window";
+  return key;
 }
 
 function getLeaderboard(statsMap, allCatalog) {
   var catalog = Array.isArray(allCatalog) ? allCatalog : [];
   var map = (statsMap && typeof statsMap === "object") ? statsMap : {};
 
-  var list = [];
+  // Build catalog lookup map
+  var catMap = {};
   for (var i = 0; i < catalog.length; i++) {
-    var item = catalog[i];
-    var stat = map[item.key];
-    var count = stat ? (Number(stat.count) || 0) : 0;
-    if (count > 0) {
-      list.push({
-        key: item.key,
-        desc: item.desc,
-        icon: item.icon,
-        category: item.category,
-        action: item.action,
-        count: count,
-        tier: getMasteryTier(count)
-      });
-    }
+    var cItem = catalog[i];
+    catMap[normalizeKey(cItem.key)] = cItem;
   }
 
+  var list = [];
+  var seenKeys = {};
+
+  // 1. Process all keys from statsMap so nothing is dropped
+  var statKeys = Object.keys(map);
+  for (var j = 0; j < statKeys.length; j++) {
+    var rawKey = statKeys[j];
+    var stat = map[rawKey];
+    var count = stat ? (Number(stat.count) || 0) : 0;
+    if (count <= 0) continue;
+
+    var norm = normalizeKey(rawKey);
+    seenKeys[norm] = true;
+    var matched = catMap[norm];
+
+    var desc = (matched && matched.desc) || (stat && stat.desc) || synthesizeKeyDesc(rawKey);
+    var icon = (matched && matched.icon) || (stat && stat.icon) || "󰌌";
+    var category = (matched && matched.category) || (stat && stat.category) || "shortcut";
+    var action = (matched && matched.action) || "";
+
+    list.push({
+      key: (matched && matched.key) || rawKey,
+      desc: desc,
+      icon: icon,
+      category: category,
+      action: action,
+      count: count,
+      tier: getMasteryTier(count)
+    });
+  }
+
+  // Sort descending by usage count
   list.sort(function(a, b) {
     return b.count - a.count;
   });
@@ -442,13 +525,13 @@ function getDiscoverNext(statsMap, allCatalog) {
   var catalog = Array.isArray(allCatalog) ? allCatalog : [];
   var map = (statsMap && typeof statsMap === "object") ? statsMap : {};
 
-  // Find high value shortcuts with lowest usage
   var candidates = [];
   for (var i = 0; i < catalog.length; i++) {
     var item = catalog[i];
-    var stat = map[item.key];
+    var norm = normalizeKey(item.key);
+    var stat = map[item.key] || map[norm];
     var count = stat ? (Number(stat.count) || 0) : 0;
-    if (count < 5) {
+    if (count < 3) {
       candidates.push({
         key: item.key,
         desc: item.desc,
@@ -460,8 +543,82 @@ function getDiscoverNext(statsMap, allCatalog) {
     }
   }
 
-  // Pick up to 4 untried candidates
   return candidates.slice(0, 4);
+}
+
+function getDojoDrills() {
+  return [
+    {
+      id: "fullscreen",
+      title: "True Fullscreen",
+      prompt: "Strip borders and expand to full monitor screen",
+      targetKey: "SUPER + F",
+      action: "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'",
+      icon: "󰊓",
+      difficulty: "Easy",
+      xp: 15
+    },
+    {
+      id: "maximize",
+      title: "Full Width (Maximized)",
+      prompt: "Fill the screen workspace while keeping the top bar visible",
+      targetKey: "SUPER + ALT + F",
+      action: "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'",
+      icon: "󰹑",
+      difficulty: "Medium",
+      xp: 25
+    },
+    {
+      id: "gaps",
+      title: "Toggle Window Gaps",
+      prompt: "Toggle outer/inner window gaps and borders globally",
+      targetKey: "SUPER + SHIFT + BACKSPACE",
+      action: "omarchy-hyprland-window-gaps-toggle",
+      icon: "󰞋",
+      difficulty: "Medium",
+      xp: 25
+    },
+    {
+      id: "float",
+      title: "Toggle Floating Mode",
+      prompt: "Switch active window between floating and tiled layout",
+      targetKey: "SUPER + T",
+      action: "hyprctl dispatch 'hl.dsp.window.float({ action = \"toggle\" })'",
+      icon: "󰉈",
+      difficulty: "Easy",
+      xp: 15
+    },
+    {
+      id: "split",
+      title: "Toggle Split Orientation",
+      prompt: "Rotate the current tiling split between horizontal and vertical",
+      targetKey: "SUPER + J",
+      action: "hyprctl dispatch 'hl.dsp.layout(\"togglesplit\")'",
+      icon: "󰤻",
+      difficulty: "Medium",
+      xp: 20
+    },
+    {
+      id: "terminal",
+      title: "Spawn Terminal",
+      prompt: "Launch or switch focus to your primary terminal",
+      targetKey: "SUPER + RETURN",
+      action: "omarchy-launch-terminal",
+      icon: "󰞷",
+      difficulty: "Easy",
+      xp: 10
+    },
+    {
+      id: "workspace-layout",
+      title: "Workspace Layout Switcher",
+      prompt: "Switch layout on the active workspace between Dwindle and Scrolling",
+      targetKey: "SUPER + L",
+      action: "omarchy-hyprland-workspace-layout-toggle",
+      icon: "󱂬",
+      difficulty: "Hard",
+      xp: 35
+    }
+  ];
 }
 
 function shellQuote(s) {

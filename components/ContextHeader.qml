@@ -18,8 +18,8 @@ Rectangle {
   implicitWidth: parent ? parent.width : Style.space(380)
   implicitHeight: contentRow.implicitHeight + Style.space(12)
   radius: Style.space(6)
-  color: Qt.rgba(accent.r, accent.g, accent.b, 0.07)
-  border.color: Qt.rgba(accent.r, accent.g, accent.b, 0.2)
+  color: Util.alpha(accent, 0.08)
+  border.color: Util.alpha(accent, 0.25)
   border.width: 1
 
   RowLayout {
@@ -40,7 +40,7 @@ Rectangle {
     // App & Window Title
     ColumnLayout {
       Layout.fillWidth: true
-      spacing: 0
+      spacing: Style.space(1)
 
       Text {
         text: root.categoryLabel
@@ -56,7 +56,7 @@ Rectangle {
         text: root.windowTitle
         font.family: Style.font.family
         font.pixelSize: Style.font.caption - 1
-        color: Qt.darker(root.foreground, 1.3)
+        color: Util.alpha(root.foreground, 0.65)
         elide: Text.ElideMiddle
         Layout.fillWidth: true
       }
@@ -67,7 +67,7 @@ Rectangle {
       implicitWidth: wsText.implicitWidth + Style.space(8)
       implicitHeight: Style.space(18)
       radius: Style.space(3)
-      color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
+      color: Util.alpha(root.foreground, 0.08)
 
       Text {
         id: wsText
@@ -86,10 +86,10 @@ Rectangle {
       implicitHeight: Style.space(18)
       radius: Style.space(3)
       color: root.isFullscreen
-        ? Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.2)
+        ? Util.alpha(Color.urgent, 0.2)
         : (root.isFloating
-          ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.2)
-          : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1))
+          ? Util.alpha(root.accent, 0.2)
+          : Util.alpha(root.foreground, 0.08))
 
       Text {
         id: layoutLabel

@@ -26,12 +26,19 @@ Instead of showing static cheat-sheets, **Navigation Guide** continuously watche
   - When focused in a browser, shows tab & address bar hotkeys (`Ctrl + L`, `Ctrl + T`, `Ctrl + Tab`).
   - When focused in an editor, shows quick open and command palette hotkeys (`Ctrl + P`, `Ctrl + Shift + P`).
   - When focused in a terminal, shows clipboard, tmux, and Herdr hotkeys.
-- **Interactive Action Launcher**:
-  - **Every single card is clickable!** Clicking any suggestion instantly executes the Hyprland dispatcher or application command.
-- **Instant Search**:
-  - Press `/` inside the panel to search across the entire shortcut catalog in real time.
-- **Rotating Tip Banner**:
-  - Carousel of educational Omarchy power-user tricks and bar gestures.
+- **Universal Theme Adaptation**:
+  - Automatically adapts to every Omarchy theme (Tokyo Night, Catppuccin Latte, Flexoki Light, Nord, OLED, etc.) without contrast bugs or hardcoded colors.
+- **True Chronological History & Universal Leaderboard**:
+  - Audit log of your recent shortcut executions with relative time chips ("Just now", "2m ago").
+  - Tracks all shortcuts used across the system, with a 🥇, 🥈, 🥉 leaderboard podium and daily active streak (🔥).
+- **Interactive Shortcut Dojo (Practice Trainer)**:
+  - In-HUD muscle memory challenges that test your tiling and navigation reflexes against real-world tasks.
+  - Multiplier combos (🔥 3x Combo!) and XP rewards that level up your Navigator rank from Novice Tiler to Omarchy Grandmaster.
+- **Instant Number Accelerators (`1`–`9`) & Vim Navigation**:
+  - Press `1` through `9` to instantly execute any open-window jump or action without touching your mouse.
+  - Full keyboard support: navigate with `j`/`k` or arrow keys, press `Enter` to run, and press `Tab` to cycle between Views.
+- **Instant Search with Quick Run**:
+  - Press `/` anywhere in the HUD to filter shortcuts in real time, then hit `Enter` to instantly execute the top match.
 
 ---
 
@@ -100,10 +107,12 @@ nav-guide/
 │   └── unregister-keybind     # Clean unbinder for bindings.lua
 ├── components/
 │   ├── ContextHeader.qml      # Active window and workspace status header
-│   ├── KeyBadge.qml           # Keyboard key cap badges
-│   ├── SuggestionCard.qml     # Interactive action card component
+│   ├── KeyBadge.qml           # Keyboard key cap badges with tactile depth
+│   ├── SuggestionCard.qml     # Interactive card with [1-9] accelerators
+│   ├── HistoryRow.qml         # Chronological execution history row with relative timestamps
+│   ├── DojoCard.qml           # Interactive speed drill & combo practice card
 │   ├── TipBanner.qml          # Rotating tips carousel
-│   └── MasteryCard.qml        # Rank and mastery level card
+│   └── MasteryCard.qml        # Rank, XP level, and daily streak card
 ├── LICENSE                    # MIT License
 └── README.md                  # Documentation and guide
 ```

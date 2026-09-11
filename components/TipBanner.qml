@@ -26,8 +26,8 @@ Rectangle {
   implicitWidth: parent ? parent.width : Style.space(380)
   implicitHeight: contentRow.implicitHeight + Style.space(16)
   radius: Style.cornerRadius
-  color: Qt.rgba(accent.r, accent.g, accent.b, 0.06)
-  border.color: Qt.rgba(accent.r, accent.g, accent.b, 0.2)
+  color: Util.alpha(accent, 0.06)
+  border.color: Util.alpha(accent, 0.2)
   border.width: 1
 
   Timer {
@@ -75,7 +75,7 @@ Rectangle {
             width: Style.space(20)
             height: Style.space(20)
             radius: Style.space(4)
-            color: prevMouse.containsMouse ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.2) : "transparent"
+            color: prevMouse.containsMouse ? Util.alpha(root.accent, 0.2) : "transparent"
 
             Text {
               anchors.centerIn: parent
@@ -96,7 +96,7 @@ Rectangle {
             width: Style.space(20)
             height: Style.space(20)
             radius: Style.space(4)
-            color: nextMouse.containsMouse ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.2) : "transparent"
+            color: nextMouse.containsMouse ? Util.alpha(root.accent, 0.2) : "transparent"
 
             Text {
               anchors.centerIn: parent
