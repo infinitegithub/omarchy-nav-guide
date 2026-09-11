@@ -1,124 +1,163 @@
 # Navigation Guide (`nav-guide`)
 
-[![Omarchy Plugin](https://img.shields.io/badge/Omarchy-Shell%20Plugin-blue)](https://omarchy.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Omarchy Shell Plugin](https://img.shields.io/badge/Omarchy-Shell%20Plugin-00D26A?style=flat-square&logo=archlinux&logoColor=white)](https://omarchy.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Hyprland Powered](https://img.shields.io/badge/Compositor-Hyprland-58E6D9?style=flat-square)](https://hyprland.org)
+[![Zero Latency](https://img.shields.io/badge/IPC-Inotify%20FileView-ff79c6?style=flat-square)](#architecture)
 
-A smart, context-aware navigation tutor and companion for [Omarchy](https://omarchy.org). 
+A live, context-aware command HUD and navigation companion for [Omarchy](https://omarchy.org).
 
-Instead of showing static cheat-sheets, **Navigation Guide** continuously watches your desktop layout and active applications to suggest relevant, practical keybindings based on **where you are and what you have open**.
-
----
-
-## Features
-
-- **Spatial Directional Awareness**:
-  - When working side-by-side with other windows on the same workspace, the plugin calculates their relative positions (`Left`, `Right`, `Above`, `Below`).
-  - Suggests directional focus shortcuts (e.g. `SUPER + Left` / `SUPER + H` to focus the browser on your left).
-  - Suggests directional swap shortcuts (e.g. `SUPER + SHIFT + Left` to swap positions).
-- **Cross-Workspace Window Jumping**:
-  - Detects windows open across all virtual workspaces.
-  - Suggests exact workspace hops (e.g. `SUPER + 2` to jump to a browser on Workspace 2).
-- **Unopened Application Suggestions**:
-  - Intelligently detects if essential tools (Terminal, Browser, File Manager) are not running anywhere and suggests their launch keybindings.
-- **Current Window Controls**:
-  - Quick access to tile/float toggle (`SUPER + T`), split layout orientation (`SUPER + J`), fullscreen (`SUPER + F`), pop-out/pin picture-in-picture (`SUPER + O`), and clean window closing (`SUPER + W`).
-- **In-App Navigation Cheatsheets**:
-  - When focused in a browser, shows tab & address bar hotkeys (`Ctrl + L`, `Ctrl + T`, `Ctrl + Tab`).
-  - When focused in an editor, shows quick open and command palette hotkeys (`Ctrl + P`, `Ctrl + Shift + P`).
-  - When focused in a terminal, shows clipboard, tmux, and Herdr hotkeys.
-- **Universal Theme Adaptation**:
-  - Automatically adapts to every Omarchy theme (Tokyo Night, Catppuccin Latte, Flexoki Light, Nord, OLED, etc.) without contrast bugs or hardcoded colors.
-- **True Chronological History & Universal Leaderboard**:
-  - Audit log of your recent shortcut executions with relative time chips ("Just now", "2m ago").
-  - Tracks all shortcuts used across the system, with a 🥇, 🥈, 🥉 leaderboard podium and daily active streak (🔥).
-- **Interactive Shortcut Dojo (Practice Trainer)**:
-  - In-HUD muscle memory challenges that test your tiling and navigation reflexes against real-world tasks.
-  - Multiplier combos (🔥 3x Combo!) and XP rewards that level up your Navigator rank from Novice Tiler to Omarchy Grandmaster.
-- **Instant Number Accelerators (`1`–`9`) & Vim Navigation**:
-  - Press `1` through `9` to instantly execute any open-window jump or action without touching your mouse.
-  - Full keyboard support: navigate with `j`/`k` or arrow keys, press `Enter` to run, and press `Tab` to cycle between Views.
-- **Instant Search with Quick Run**:
-  - Press `/` anywhere in the HUD to filter shortcuts in real time, then hit `Enter` to instantly execute the top match.
+Replaces the default static `SUPER + K` cheatsheet with an interactive, real-time navigation cockpit that detects **where you are**, **what windows you have open**, and **where you need to jump next**.
 
 ---
 
-## Installation
+## ⚡ Highlights
 
-### Via Omarchy CLI
+* **🎯 Real-Time Open Window Detection**: Instantly shows all running apps across virtual workspaces (Brave, Windows VM, Blender, Code Editors, Terminals) with 1-keystroke numeric accelerators (`[1]`, `[2]`, `[3]`).
+* **🔎 Auto-Focused Omnisearch**: Opens with the search cursor immediately active. Queries both live open windows and 50+ Omarchy shortcuts simultaneously with zero clicks.
+* **🪟 Active Window Layout Controls**: Instant controls for the focused window: True Fullscreen (`SUPER + F`), Full Width / Maximize (`SUPER + ALT + F`), Float / Tile toggle (`SUPER + T`), Split rotation (`SUPER + J`), and Scratchpad stash (`SUPER + ALT + S`).
+* **📦 Seamless Scratchpad Support**: Detects scratchpad windows and surfaces them with standard `SUPER + S` toggles rather than raw internal IDs.
+* **🎨 100% Theme Adaptive**: Dynamically inherits active theme tokens (`Color.popups.*`, `Color.accent`, `Color.muted`). Seamless contrast across Tokyo Night, Catppuccin, Nord, Flexoki, and OLED.
+* **⚡ 0ms Reactive Inotify Engine**: Uses a background Hyprland socket daemon and Quickshell's native `FileView` watchers. Zero polling, zero subshell delay, 100% in-memory data at launch.
+* **📜 Leaderboard & Execution Log**: Tracks which key combinations you use most with podium rankings (🥇 🥈 🥉) and relative time history.
+* **🥋 Muscle Memory Dojo (Tab 4)**: An interactive reflex drill mode with XP rewards and combo multipliers to master tiling shortcuts under pressure.
 
-```bash
-omarchy plugin add https://github.com/<your-username>/nav-guide.git --enable --yes
+---
+
+## 📸 Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 󰞋 Navigation Guide       🌱 LVL 4: Tiling Specialist · 163 XP │
+├─────────────────────────────────────────────────────────────┤
+│ [ 🎯 Navigation ]  [ 📋 All Commands ]  [ 📜 History ] [ 🥋 Dojo ]│
+├─────────────────────────────────────────────────────────────┤
+│ 🔍 Search commands or open windows (brave, blender, split)...│
+├─────────────────────────────────────────────────────────────┤
+│ 󰖟 Currently focused: Brave Browser · Workspace 2           │
+│   "He Woke Up 500 Years in the Future - YouTube - Brave"    │
+├─────────────────────────────────────────────────────────────┤
+│ SWITCH TO OPEN APPS                                         │
+│  [1] SUPER + 3  Switch to Windows VM (Workspace 3)   [WS 3] │
+│  [2] SUPER + 4  Switch to Blender 3D (Workspace 4)   [WS 4] │
+│  [3] SUPER + S  Switch to Antigravity IDE (Scratchpad)     │
+│      ALT + TAB  Cycle Next Window                 [Cycle]   │
+├─────────────────────────────────────────────────────────────┤
+│ ACTIVE WINDOW CONTROLS & TILING                             │
+│      SUPER + F      Full Screen (Border-Free)               │
+│      SUPER + ALT + F Full Width (Maximized)                 │
+│      SUPER + T      Toggle Floating Mode                    │
+│      SUPER + J      Toggle Split Orientation                │
+│      SUPER + W      Close Active Window                     │
+├─────────────────────────────────────────────────────────────┤
+│ ESSENTIAL SYSTEM TOOLS                                      │
+│      SUPER + S      Toggle Scratchpad Workspace             │
+│      SUPER + SPACE  Application Launcher Menu               │
+│      SUPER + RETURN Spawn Terminal                          │
+│      SUPER + CTRL+V Clipboard History                       │
+│      PRINT          Interactive Screenshot Region           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Manual Installation
+---
 
-Clone directly into your Omarchy user plugins folder:
+## 🚀 Installation
+
+### Option A: Via Omarchy CLI (Recommended)
 
 ```bash
-git clone https://github.com/<your-username>/nav-guide.git ~/.config/omarchy/plugins/nav-guide
+omarchy plugin add https://github.com/infinitegithub/omarchy-nav-guide.git --enable --yes
+```
+
+### Option B: Manual Git Clone
+
+```bash
+git clone https://github.com/infinitegithub/omarchy-nav-guide.git ~/.config/omarchy/plugins/nav-guide
 omarchy-shell shell rescanPlugins
 omarchy plugin enable nav-guide center
+omarchy-restart-shell
 ```
 
 ---
 
-## Configuration
+## ⌨️ Controls & Keybindings
 
-The plugin is configured in `~/.config/omarchy/shell.json`:
+Once installed, **Navigation Guide** automatically binds to **`SUPER + K`** (while preserving `SUPER + SHIFT + K` for Omarchy's classic text menu).
 
-```json
-{
-  "id": "nav-guide"
-}
-```
-
-### Move on Bar
-
-Move the widget between bar sections:
-```bash
-omarchy bar move nav-guide --section center
-omarchy bar move nav-guide --section right
-omarchy bar move nav-guide --section left
-```
-
-### Keybinding Summon (`SUPER + K`)
-
-When installed and enabled, Navigation Guide **automatically registers itself to `SUPER + K`**, replacing the default static keybindings pop-up with this interactive HUD.
-
-- **`SUPER + K`**: Toggles the Navigation Guide HUD.
-- **`SUPER + SHIFT + K`**: Retained as a fallback shortcut to open Omarchy's classic text-based keybindings menu (`omarchy-menu-keybindings`).
-
-*(Note: The setup is performed once on initial load and written into an isolated block in `~/.config/hypr/bindings.lua`. If you ever uninstall the plugin, you can run `./bin/unregister-keybind` to restore defaults).*
+| Shortcut | Action |
+| :--- | :--- |
+| **`SUPER + K`** | Open / close Navigation Guide HUD |
+| **`1` – `9`** | Instantly switch to matching open app accelerator |
+| **`Down` / `Up`** | Navigate selection down / up |
+| **`Enter`** | Execute highlighted command or switch to selected window |
+| **`Tab` / `Shift + Tab`** | Cycle tabs (`Navigation` ↔ `All Commands` ↔ `History` ↔ `Dojo`) |
+| **`Esc`** | Clear search field, or dismiss HUD if empty |
+| **`SUPER + SHIFT + K`** | Classic text keybindings fallback menu |
 
 ---
 
-## Project Structure
+## 🧭 HUD Views
+
+### 1. 🎯 Navigation (Page 1)
+* **Active Window Context**: Displays current app, window title, and active workspace.
+* **Switch to Open Apps**: Lists every running window on other workspaces and scratchpads with accelerator badges.
+* **Window Controls**: Quick layout actions tailored to the active window.
+* **Essential Tools**: Instant access to Scratchpad, Launcher, Terminal, Files, Clipboard, and Screenshot.
+
+### 2. 📋 All Commands (Catalog)
+Full catalog of 50+ official Omarchy keybindings indexed across:
+* **Apps & Launchers**: Terminal, Browser, Private Browser, Editors, Tmux, TUIs, WebApps.
+* **Window Management**: Tile/Float, Fullscreen, Full-Width, Groups, Aspect, Transparency, Gaps.
+* **Workspaces & Monitors**: Switching, silent movement, multi-monitor focus.
+* **System Utilities**: Power menu, Volume/Audio, Bluetooth, Network, Display, Activity (btop), OCR.
+
+### 3. 📜 History & Rank
+* **Mastery Progress**: Live XP, Navigator Rank (Level 1 Novice → Level 6 Grandmaster), and daily streak counter.
+* **Podium Leaderboard**: Highlights your most frequently triggered key combinations (🥇, 🥈, 🥉).
+* **Execution Audit Stream**: Chronological log of recent actions with relative timestamps ("Just now", "2m ago").
+
+### 4. 🥋 Dojo Practice
+* Interactive muscle memory drill mode.
+* Practice real-world layout actions under pressure, earn +XP rewards, build streak combo multipliers, and discover underused shortcuts.
+
+---
+
+## 🛠️ Architecture
 
 ```
 nav-guide/
-├── manifest.json              # Plugin manifest (schema version 1)
-├── Panel.qml                  # Bar widget and KeyboardPanel root
-├── NavigationModel.js         # Spatial calculation and context rule engine
-├── TipCatalog.js              # Shortcut catalog and educational tips
+├── manifest.json              # Omarchy plugin manifest (schema v1)
+├── Panel.qml                  # Root Quickshell KeyboardPanel & FileView watchers
+├── NavigationModel.js         # App detection, spatial layout engine & omni-search
+├── TipCatalog.js              # Complete Omarchy system keybindings catalog
 ├── bin/
-│   ├── window-state           # Real-time activewindow and clients query script
-│   ├── stats-manager          # Usage and shortcut ranking persistence
-│   ├── register-keybind       # Automatic SUPER + K installer for bindings.lua
-│   └── unregister-keybind     # Clean unbinder for bindings.lua
-├── components/
-│   ├── ContextHeader.qml      # Active window and workspace status header
-│   ├── KeyBadge.qml           # Keyboard key cap badges with tactile depth
-│   ├── SuggestionCard.qml     # Interactive card with [1-9] accelerators
-│   ├── HistoryRow.qml         # Chronological execution history row with relative timestamps
-│   ├── DojoCard.qml           # Interactive speed drill & combo practice card
-│   ├── TipBanner.qml          # Rotating tips carousel
-│   └── MasteryCard.qml        # Rank, XP level, and daily streak card
-├── LICENSE                    # MIT License
-└── README.md                  # Documentation and guide
+│   ├── hypr-listener          # Real-time daemon monitoring Hyprland .socket2.sock
+│   ├── window-state           # Generates atomic nav-guide-windows.json snapshot
+│   ├── stats-manager          # Thread-safe shortcut counter and streak manager
+│   ├── stats_manager.py       # Python ranking & history storage engine
+│   ├── register-keybind       # SUPER + K installer for ~/.config/hypr/bindings.lua
+│   └── unregister-keybind     # Clean unbinder script
+└── components/
+    ├── SuggestionCard.qml     # Interactive card with [1-9] accelerator badges
+    ├── KeyBadge.qml           # Tactile keyboard key badge with theme adaptation
+    ├── MasteryCard.qml        # Level, XP bar, and streak display
+    ├── HistoryRow.qml         # Audit stream row
+    └── DojoCard.qml           # Speed drill card with combo multipliers
 ```
+
+* **Data Storage**:
+  * Windows State: `~/.local/state/omarchy/nav-guide-windows.json`
+  * Stats & History: `~/.local/state/omarchy/nav-guide-stats.json`
 
 ---
 
-## License
+## 🤝 Contributing
 
-[MIT](LICENSE) © 2026 Es Sadik Sanhaji
+Pull requests and issue reports are welcome! If you're using Omarchy on Arch Linux + Hyprland, feel free to submit new application categorizations or feature suggestions.
+
+---
+
+## 📄 License
+
+Distributed under the [MIT License](LICENSE).  
+Copyright © 2026 Es Sadik Sanhaji.
