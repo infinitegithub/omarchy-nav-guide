@@ -26,9 +26,9 @@ fi
 cat >> "$BINDINGS_FILE" <<'BLOCK'
 
 -- [nav-guide-keybind]
--- Replace default text keybindings menu with Navigation Guide
+-- Dynamic Super+K learning co-pilot for Omarchy
 hl.unbind("SUPER + K")
-o.bind("SUPER + K", "Navigation Guide", "omarchy-shell nav-guide toggle")
+o.bind("SUPER + K", "SuperK Pilot", "omarchy-shell nav-guide toggle")
 -- Preserve the classic keybindings menu on a dedicated fallback shortcut
 o.bind("SUPER + SHIFT + K", "Classic Keybindings Menu", "omarchy-menu-keybindings")
 -- [/nav-guide-keybind]

@@ -1,124 +1,104 @@
-# Navigation Guide (`nav-guide`)
+# SuperK Pilot 🧭
 
 [![Omarchy Shell Plugin](https://img.shields.io/badge/Omarchy-Shell%20Plugin-00D26A?style=flat-square&logo=archlinux&logoColor=white)](https://omarchy.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Hyprland Powered](https://img.shields.io/badge/Compositor-Hyprland-58E6D9?style=flat-square)](https://hyprland.org)
-[![Zero Latency](https://img.shields.io/badge/IPC-Inotify%20FileView-ff79c6?style=flat-square)](#architecture)
+[![Zero Latency](https://img.shields.io/badge/Engine-Socket2%20Inotify-ff79c6?style=flat-square)](#architecture)
 
-A live, context-aware command HUD and navigation companion for [Omarchy](https://omarchy.org).
+> **The real-time `SUPER + K` learning co-pilot that turns shortcut memorization into pure muscle memory.**
 
-Replaces the default static `SUPER + K` cheatsheet with an interactive, real-time navigation cockpit that detects **where you are**, **what windows you have open**, and **where you need to jump next**.
-
----
-
-## ⚡ Highlights
-
-* **🎯 Real-Time Open Window Detection**: Instantly shows all running apps across virtual workspaces (Brave, Windows VM, Blender, Code Editors, Terminals) with 1-keystroke numeric accelerators (`[1]`, `[2]`, `[3]`).
-* **🔎 Auto-Focused Omnisearch**: Opens with the search cursor immediately active. Queries both live open windows and 50+ Omarchy shortcuts simultaneously with zero clicks.
-* **🪟 Active Window Layout Controls**: Instant controls for the focused window: True Fullscreen (`SUPER + F`), Full Width / Maximize (`SUPER + ALT + F`), Float / Tile toggle (`SUPER + T`), Split rotation (`SUPER + J`), and Scratchpad stash (`SUPER + ALT + S`).
-* **📦 Seamless Scratchpad Support**: Detects scratchpad windows and surfaces them with standard `SUPER + S` toggles rather than raw internal IDs.
-* **🎨 100% Theme Adaptive**: Dynamically inherits active theme tokens (`Color.popups.*`, `Color.accent`, `Color.muted`). Seamless contrast across Tokyo Night, Catppuccin, Nord, Flexoki, and OLED.
-* **⚡ 0ms Reactive Inotify Engine**: Uses a background Hyprland socket daemon and Quickshell's native `FileView` watchers. Zero polling, zero subshell delay, 100% in-memory data at launch.
-* **📜 Leaderboard & Execution Log**: Tracks which key combinations you use most with podium rankings (🥇 🥈 🥉) and relative time history.
-* **🥋 Muscle Memory Dojo (Tab 4)**: An interactive reflex drill mode with XP rewards and combo multipliers to master tiling shortcuts under pressure.
+<p align="center">
+  <img src="preview.png" alt="SuperK Pilot HUD" width="700" />
+</p>
 
 ---
 
-## 📸 Overview
+## 🎯 The Philosophy: Teach Shortcuts, Don't Replace Them
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 󰞋 Navigation Guide       🌱 LVL 4: Tiling Specialist · 163 XP │
-├─────────────────────────────────────────────────────────────┤
-│ [ 🎯 Navigation ]  [ 📋 All Commands ]  [ 📜 History ] [ 🥋 Dojo ]│
-├─────────────────────────────────────────────────────────────┤
-│ 🔍 Search commands or open windows (brave, blender, split)...│
-├─────────────────────────────────────────────────────────────┤
-│ 󰖟 Currently focused: Brave Browser · Workspace 2           │
-│   "He Woke Up 500 Years in the Future - YouTube - Brave"    │
-├─────────────────────────────────────────────────────────────┤
-│ SWITCH TO OPEN APPS                                         │
-│  [1] SUPER + 3  Switch to Windows VM (Workspace 3)   [WS 3] │
-│  [2] SUPER + 4  Switch to Blender 3D (Workspace 4)   [WS 4] │
-│  [3] SUPER + S  Switch to Antigravity IDE (Scratchpad)     │
-│      ALT + TAB  Cycle Next Window                 [Cycle]   │
-├─────────────────────────────────────────────────────────────┤
-│ ACTIVE WINDOW CONTROLS & TILING                             │
-│      SUPER + F      Full Screen (Border-Free)               │
-│      SUPER + ALT + F Full Width (Maximized)                 │
-│      SUPER + T      Toggle Floating Mode                    │
-│      SUPER + J      Toggle Split Orientation                │
-│      SUPER + W      Close Active Window                     │
-├─────────────────────────────────────────────────────────────┤
-│ ESSENTIAL SYSTEM TOOLS                                      │
-│      SUPER + S      Toggle Scratchpad Workspace             │
-│      SUPER + SPACE  Application Launcher Menu               │
-│      SUPER + RETURN Spawn Terminal                          │
-│      SUPER + CTRL+V Clipboard History                       │
-│      PRINT          Interactive Screenshot Region           │
-└─────────────────────────────────────────────────────────────┘
-```
+Most navigation helpers try to replace your keyboard with clickable mouse menus. **SuperK Pilot does the exact opposite.**
+
+It acts as an intelligent, real-time flight instructor that sits beside you in the cockpit. Whenever you summon it with `SUPER + K`, it inspects your active workspace, surfaces the exact key combination you need, and coaches your fingers to execute it until navigation becomes second nature.
+
+* **Exact Keys Displayed Everywhere**: Every suggestion prominently features its physical key sequence (`SUPER + 1`, `SUPER + F`, `SUPER + T`).
+* **1-Keystroke Numeric Accelerators**: Jump to any running app across workspaces instantly with `[1]`, `[2]`, `[3]`.
+* **The Goal Is Graduation**: With live XP tracking, daily streaks, and reflex drills, SuperK Pilot is built so that you eventually won't even need to open it—because your fingers will already know what to do.
 
 ---
 
-## 🚀 Installation
+## 🥊 Default `SUPER + K` vs. SuperK Pilot
 
-### Option A: Via Omarchy CLI (Recommended)
+| Feature | Built-in Omarchy `SUPER + K` | SuperK Pilot 🧭 |
+| :--- | :---: | :---: |
+| **Interface** | Static text dump (80+ lines) | High-contrast, theme-adaptive interactive HUD |
+| **Context Awareness** | ❌ None (shows everything at once) | ✅ **0ms In-Memory** (knows active app, workspace, and state) |
+| **Open App Radar** | ❌ None (you must memorize where apps live) | ✅ **Live App Switcher** (`[1]` Brave, `[2]` Blender, `[3]` VM) |
+| **Learning Model** | ❌ Passive reading | ✅ **Active Muscle Memory** (accelerators & physical key prompts) |
+| **Search Engine** | ❌ None | ✅ **Zero-Click Omnisearch** across open windows & 50+ keybindings |
+| **Mastery Tracking** | ❌ 0 feedback | ✅ **Live XP Bar**, daily streaks, and shortcut podium (🥇🥈🥉) |
+| **Reflex Training** | ❌ None | ✅ **Dojo Speed Drills** to lock shortcuts into subconscious memory |
+| **End Result** | You stay dependent on cheat sheets | **You build reflex speed and master your keyboard** |
+
+---
+
+## ⚡ Key Highlights
+
+### 1. 🎯 Live Open-App Radar (0ms Latency)
+No more guessing where you left your browser or 3D viewport. SuperK Pilot streams live window state directly from Hyprland's `socket2.sock`. When summoned, it instantly surfaces all running apps across workspaces and scratchpads with single-keystroke accelerators:
+* `[1]` `SUPER + 1` → Switch to Brave Browser (Workspace 1)
+* `[2]` `SUPER + 4` → Switch to Blender 3D (Workspace 4)
+* `[3]` `SUPER + S` → Switch to Antigravity IDE (Scratchpad)
+
+### 2. 🪟 Contextual Window & Tiling Controls
+Adapts to the active window on your screen:
+* **Full Screen**: `SUPER + F` (border-free focus)
+* **Full Width / Maximize**: `SUPER + ALT + F` (fills screen while keeping the status bar visible)
+* **Float / Tile Toggle**: `SUPER + T` (snap floating windows back into the tiling grid)
+* **Split Orientation**: `SUPER + J` (toggle next split between horizontal and vertical)
+* **Stash to Scratchpad**: `SUPER + ALT + S` (hide window into background)
+
+### 3. 🔍 Zero-Click Omnisearch
+The search cursor is auto-focused the millisecond `SUPER + K` opens. Type a partial app name (`brave`, `blender`, `vm`) or a layout concept (`split`, `scratch`, `gaps`, `calc`) to filter open windows and the complete 50+ Omarchy system catalog simultaneously. Hit `Enter` to execute immediately.
+
+### 4. 🏆 Gamified Mastery Progression & Podium
+Every physical key combination you trigger is logged in real-time in the background:
+* **Navigator Ranks**: Level 1 Novice → Level 6 Grandmaster.
+* **Podium Leaderboard**: Highlights your three most frequently triggered shortcuts (🥇, 🥈, 🥉).
+* **Audit Stream**: Relative timestamp log of recent shortcuts ("Just now", "2m ago") so you can audit your workflow efficiency.
+
+### 5. 🥋 Reflex Dojo (Tab 4)
+A dedicated, distraction-free practice drill mode. Run 60-second muscle memory speed drills under pressure to lock complex window and workspace shortcuts into subconscious reflexes.
+
+---
+
+## 🚀 Quick Install
+
+Install and enable SuperK Pilot directly from git into your Omarchy environment:
 
 ```bash
 omarchy plugin add https://github.com/infinitegithub/omarchy-nav-guide.git --enable --yes
 ```
 
-### Option B: Manual Git Clone
+To bind `SUPER + K` to SuperK Pilot, run the included keybind installer:
 
 ```bash
-git clone https://github.com/infinitegithub/omarchy-nav-guide.git ~/.config/omarchy/plugins/nav-guide
-omarchy-shell shell rescanPlugins
-omarchy plugin enable nav-guide center
-omarchy-restart-shell
+~/.config/omarchy/plugins/nav-guide/bin/register-keybind
 ```
 
+> **Note**: This preserves Omarchy's classic text keybindings menu on `SUPER + SHIFT + K` as a fallback.
+
 ---
 
-## ⌨️ Controls & Keybindings
+## 🎮 Keyboard Controls
 
-Once installed, **Navigation Guide** automatically binds to **`SUPER + K`** (while preserving `SUPER + SHIFT + K` for Omarchy's classic text menu).
-
-| Shortcut | Action |
+| Keystroke | Action |
 | :--- | :--- |
-| **`SUPER + K`** | Open / close Navigation Guide HUD |
-| **`1` – `9`** | Instantly switch to matching open app accelerator |
-| **`Down` / `Up`** | Navigate selection down / up |
-| **`Enter`** | Execute highlighted command or switch to selected window |
-| **`Tab` / `Shift + Tab`** | Cycle tabs (`Navigation` ↔ `All Commands` ↔ `History` ↔ `Dojo`) |
-| **`Esc`** | Clear search field, or dismiss HUD if empty |
-| **`SUPER + SHIFT + K`** | Classic text keybindings fallback menu |
-
----
-
-## 🧭 HUD Views
-
-### 1. 🎯 Navigation (Page 1)
-* **Active Window Context**: Displays current app, window title, and active workspace.
-* **Switch to Open Apps**: Lists every running window on other workspaces and scratchpads with accelerator badges.
-* **Window Controls**: Quick layout actions tailored to the active window.
-* **Essential Tools**: Instant access to Scratchpad, Launcher, Terminal, Files, Clipboard, and Screenshot.
-
-### 2. 📋 All Commands (Catalog)
-Full catalog of 50+ official Omarchy keybindings indexed across:
-* **Apps & Launchers**: Terminal, Browser, Private Browser, Editors, Tmux, TUIs, WebApps.
-* **Window Management**: Tile/Float, Fullscreen, Full-Width, Groups, Aspect, Transparency, Gaps.
-* **Workspaces & Monitors**: Switching, silent movement, multi-monitor focus.
-* **System Utilities**: Power menu, Volume/Audio, Bluetooth, Network, Display, Activity (btop), OCR.
-
-### 3. 📜 History & Rank
-* **Mastery Progress**: Live XP, Navigator Rank (Level 1 Novice → Level 6 Grandmaster), and daily streak counter.
-* **Podium Leaderboard**: Highlights your most frequently triggered key combinations (🥇, 🥈, 🥉).
-* **Execution Audit Stream**: Chronological log of recent actions with relative timestamps ("Just now", "2m ago").
-
-### 4. 🥋 Dojo Practice
-* Interactive muscle memory drill mode.
-* Practice real-world layout actions under pressure, earn +XP rewards, build streak combo multipliers, and discover underused shortcuts.
+| `SUPER + K` | Summon / Dismiss SuperK Pilot HUD |
+| `1` .. `9` | Instant accelerator to switch directly to open app `[N]` |
+| `Down` / `Up` | Navigate suggestions or search results |
+| `Enter` | Execute highlighted shortcut or switch to selected window |
+| `Tab` / `Shift + Tab` | Cycle tabs (`Navigation` ↔ `All Commands` ↔ `History & Rank` ↔ `Dojo Practice`) |
+| `Esc` | Clear search query, or close the HUD if already empty |
+| `SUPER + SHIFT + K` | Classic fallback keybindings menu |
 
 ---
 
@@ -127,13 +107,14 @@ Full catalog of 50+ official Omarchy keybindings indexed across:
 ```
 nav-guide/
 ├── manifest.json              # Omarchy plugin manifest (schema v1)
-├── Panel.qml                  # Root Quickshell KeyboardPanel & FileView watchers
-├── NavigationModel.js         # App detection, spatial layout engine & omni-search
+├── Panel.qml                  # Quickshell KeyboardPanel HUD & inotify watchers
+├── NavigationModel.js         # Contextual suggestion engine & omnisearch
 ├── TipCatalog.js              # Complete Omarchy system keybindings catalog
+├── preview.png                # Pixel-perfect storefront hero screenshot
 ├── bin/
-│   ├── hypr-listener          # Real-time daemon monitoring Hyprland .socket2.sock
+│   ├── hypr-listener          # Real-time daemon monitoring Hyprland socket2.sock
 │   ├── window-state           # Generates atomic nav-guide-windows.json snapshot
-│   ├── stats-manager          # Thread-safe shortcut counter and streak manager
+│   ├── stats-manager          # Thread-safe shortcut counter and streak engine
 │   ├── stats_manager.py       # Python ranking & history storage engine
 │   ├── register-keybind       # SUPER + K installer for ~/.config/hypr/bindings.lua
 │   └── unregister-keybind     # Clean unbinder script
@@ -145,7 +126,7 @@ nav-guide/
     └── DojoCard.qml           # Speed drill card with combo multipliers
 ```
 
-* **Data Storage**:
+* **Data State Storage**:
   * Windows State: `~/.local/state/omarchy/nav-guide-windows.json`
   * Stats & History: `~/.local/state/omarchy/nav-guide-stats.json`
 
@@ -153,7 +134,7 @@ nav-guide/
 
 ## 🤝 Contributing
 
-Pull requests and issue reports are welcome! If you're using Omarchy on Arch Linux + Hyprland, feel free to submit new application categorizations or feature suggestions.
+Contributions and ideas are welcome! Feel free to open an issue or pull request to add new application recognition rules or workflow enhancements.
 
 ---
 

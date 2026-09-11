@@ -309,7 +309,7 @@ Panel {
     bar: root.bar
     text: root.icon
     slotSize: Style.bar.statusSlot
-    tooltipText: "Navigation Guide · " + (root.navigatorRank ? root.navigatorRank.title : "Guide")
+    tooltipText: "SuperK Pilot · " + (root.navigatorRank ? root.navigatorRank.title : "Co-Pilot")
     onPressed: root.toggle()
   }
 
@@ -347,7 +347,7 @@ Panel {
           spacing: Style.space(8)
 
           Text {
-            text: "󰞋 Navigation Guide"
+            text: "󰞋 SuperK Pilot"
             font.family: Style.font.family
             font.pixelSize: Style.font.title
             font.bold: true

@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "nav-guide",
-  "name": "Navigation Guide",
+  "name": "SuperK Pilot",
   "version": "1.0.0",
   "author": "Es Sadik Sanhaji",
   "license": "MIT",
-  "description": "Context-aware navigation tutor for Omarchy: suggests keybinds based on what windows you have open and where you are",
+  "description": "Real-time Super+K learning co-pilot for Omarchy: teaches you system keybindings with context-aware shortcuts for your open apps, reflex muscle-memory training, and live mastery progression",
   "kinds": [
     "bar-widget"
   ],
@@ -13,8 +13,8 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "Navigation Guide",
-    "description": "Contextual navigation shortcuts and learning tips",
+    "displayName": "SuperK Pilot",
+    "description": "Real-time Super+K learning co-pilot and context-aware shortcut tutor",
     "category": "Utilities",
     "allowMultiple": false,
     "defaultSection": "center"
