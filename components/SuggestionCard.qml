@@ -20,23 +20,23 @@ Rectangle {
   signal triggered(string actionCmd)
 
   implicitWidth: parent ? parent.width : Style.space(380)
-  implicitHeight: contentColumn.implicitHeight + Style.space(16)
-  radius: Style.cornerRadius
+  implicitHeight: Math.max(Style.space(36), row.implicitHeight + Style.space(12))
+  radius: Style.space(6)
 
   color: hovered
     ? Qt.rgba(accent.r, accent.g, accent.b, 0.12)
-    : Qt.rgba(foreground.r, foreground.g, foreground.b, 0.04)
+    : Qt.rgba(foreground.r, foreground.g, foreground.b, 0.03)
 
   border.color: hovered
-    ? Qt.rgba(accent.r, accent.g, accent.b, 0.4)
+    ? Qt.rgba(accent.r, accent.g, accent.b, 0.45)
     : Qt.rgba(foreground.r, foreground.g, foreground.b, 0.08)
   border.width: 1
 
   Behavior on color {
-    ColorAnimation { duration: 120 }
+    ColorAnimation { duration: 100 }
   }
   Behavior on border.color {
-    ColorAnimation { duration: 120 }
+    ColorAnimation { duration: 100 }
   }
 
   MouseArea {
@@ -51,81 +51,84 @@ Rectangle {
     }
   }
 
-  ColumnLayout {
-    id: contentColumn
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.verticalCenter: parent.verticalCenter
-    anchors.margins: Style.space(10)
-    spacing: Style.space(4)
+  RowLayout {
+    id: row
+    anchors.fill: parent
+    anchors.leftMargin: Style.space(10)
+    anchors.rightMargin: Style.space(10)
+    spacing: Style.space(8)
 
-    RowLayout {
+    // Leading Icon
+    Text {
+      text: root.icon
+      font.family: Style.font.family
+      font.pixelSize: Style.font.body
+      color: root.hovered ? root.accent : root.foreground
+    }
+
+    // Title & Optional Subtext
+    ColumnLayout {
       Layout.fillWidth: true
-      spacing: Style.space(8)
+      spacing: 0
 
-      // Icon
-      Text {
-        text: root.icon
-        font.family: Style.font.family
-        font.pixelSize: Style.font.body
-        color: root.hovered ? root.accent : root.foreground
-      }
-
-      // Title
-      Text {
-        text: root.title
-        font.family: Style.font.family
-        font.pixelSize: Style.font.body
-        font.bold: true
-        color: root.foreground
-        Layout.fillWidth: true
-        elide: Text.ElideRight
-      }
-
-      // Badge (optional)
-      Rectangle {
-        visible: root.badgeText !== ""
-        implicitWidth: badgeLabel.implicitWidth + Style.space(8)
-        implicitHeight: Style.space(16)
-        radius: Style.space(3)
-        color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.15)
+      RowLayout {
+        spacing: Style.space(6)
 
         Text {
-          id: badgeLabel
-          anchors.centerIn: parent
-          text: root.badgeText
+          text: root.title
           font.family: Style.font.family
-          font.pixelSize: Style.font.caption - 1
-          color: root.accent
+          font.pixelSize: Style.font.body
+          font.bold: true
+          color: root.foreground
+          elide: Text.ElideRight
         }
-      }
 
-      // Key badges
-      Row {
-        spacing: Style.space(4)
-        Layout.alignment: Qt.AlignRight
+        // Badge pill
+        Rectangle {
+          visible: root.badgeText !== ""
+          implicitWidth: badgeLabel.implicitWidth + Style.space(8)
+          implicitHeight: Style.space(16)
+          radius: Style.space(3)
+          color: root.badgeText.indexOf("Switch") !== -1
+            ? Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.22)
+            : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.1)
 
-        Repeater {
-          model: NavModel.parseKeys(root.keyString)
-          delegate: KeyBadge {
-            keyText: modelData
-            foreground: root.foreground
-            accent: root.accent
+          Text {
+            id: badgeLabel
+            anchors.centerIn: parent
+            text: root.badgeText
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption - 1
+            font.bold: true
+            color: root.badgeText.indexOf("Switch") !== -1 ? root.accent : root.foreground
           }
         }
       }
+
+      Text {
+        visible: root.desc !== "" && root.desc !== root.title
+        text: root.desc
+        font.family: Style.font.family
+        font.pixelSize: Style.font.caption - 1
+        color: Qt.darker(root.foreground, 1.4)
+        elide: Text.ElideRight
+        Layout.fillWidth: true
+      }
     }
 
-    // Description
-    Text {
-      visible: root.desc !== ""
-      text: root.desc
-      font.family: Style.font.family
-      font.pixelSize: Style.font.caption
-      color: Qt.darker(root.foreground, 1.4)
-      Layout.fillWidth: true
-      wrapMode: Text.WordWrap
-      Layout.leftMargin: Style.space(22)
+    // Key badges (right-aligned)
+    Row {
+      spacing: Style.space(3)
+      Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+
+      Repeater {
+        model: NavModel.parseKeys(root.keyString)
+        delegate: KeyBadge {
+          keyText: modelData
+          foreground: root.foreground
+          accent: root.accent
+        }
+      }
     }
   }
 }

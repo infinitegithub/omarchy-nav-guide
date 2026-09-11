@@ -33,6 +33,7 @@ Panel {
   property var rawActive: ({})
   property var rawClients: []
 
+  property string currentTab: "context" // "context" | "all"
   property string searchQuery: ""
 
   // Refresh active window and all client windows
@@ -77,14 +78,14 @@ Panel {
     onTriggered: root.refreshState()
   }
 
-  // Current detected category and label
-  readonly property var categoryInfo: NavModel.detectCategory(
+  // App info for active window
+  readonly property var activeApp: NavModel.detectAppInfo(
     root.rawActive.class || (toplevel ? toplevel.appId : ""),
     root.rawActive.title || (toplevel ? toplevel.title : "")
   )
 
-  // Smart contextual suggestions based on where you are AND all open windows
-  readonly property var smartSuggestions: NavModel.buildSmartSuggestions(
+  // Smart segmented navigation model
+  readonly property var smartNav: NavModel.buildSmartNavigation(
     root.rawActive,
     root.rawClients
   )
@@ -109,8 +110,8 @@ Panel {
   readonly property var searchResults: filterShortcuts(root.searchQuery)
 
   // Reliable action execution:
-  // Dismisses popup panel first, then triggers action after 60ms so compositor
-  // returns focus to client windows and Hyprland dispatchers execute smoothly.
+  // Dismisses popup panel first, then executes command after 50ms so compositor
+  // restores focus to client window and dispatchers execute without layer-shell interception.
   function executeAction(cmd) {
     if (!cmd) return
     root.close()
@@ -120,7 +121,7 @@ Panel {
 
   Timer {
     id: actionTimer
-    interval: 60
+    interval: 50
     repeat: false
     property string pendingCmd: ""
     onTriggered: {
@@ -142,7 +143,7 @@ Panel {
     bar: root.bar
     text: root.icon
     slotSize: Style.bar.statusSlot
-    tooltipText: "Navigation Guide · " + root.categoryInfo.label
+    tooltipText: "Navigation Guide (" + root.activeApp.label + ")"
     onPressed: root.toggle()
   }
 
@@ -156,7 +157,7 @@ Panel {
     focusTarget: keyCatcher
 
     contentWidth: panel.fittedContentWidth(Style.space(480))
-    contentHeight: panel.fittedContentHeight(Style.space(580), 660)
+    contentHeight: panel.fittedContentHeight(Style.space(560), 640)
 
     PanelKeyCatcher {
       id: keyCatcher
@@ -169,26 +170,92 @@ Panel {
 
       ColumnLayout {
         anchors.fill: parent
-        spacing: Style.space(10)
+        spacing: Style.space(8)
 
-        // Title and search row
+        // Header with title & segmented tab buttons
         RowLayout {
           Layout.fillWidth: true
           spacing: Style.space(8)
 
           Text {
-            text: "󰞋 Navigation Guide"
+            text: "󰞋 Navigation"
             font.family: Style.font.family
-            font.pixelSize: Style.font.headline
+            font.pixelSize: Style.font.title
             font.bold: true
             color: Color.popups.text
           }
 
+          // Tab Switcher Pills
+          Row {
+            spacing: Style.space(4)
+            Layout.leftMargin: Style.space(8)
+
+            // Context Tab
+            Rectangle {
+              implicitWidth: contextTabLabel.implicitWidth + Style.space(12)
+              implicitHeight: Style.space(22)
+              radius: Style.space(4)
+              color: root.currentTab === "context" && root.searchQuery === ""
+                ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.22)
+                : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+              Text {
+                id: contextTabLabel
+                anchors.centerIn: parent
+                text: "🎯 Context Guide"
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.bold: root.currentTab === "context"
+                color: root.currentTab === "context" && root.searchQuery === "" ? Color.accent : Color.foreground
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  root.currentTab = "context"
+                  searchField.text = ""
+                  root.searchQuery = ""
+                }
+              }
+            }
+
+            // All Keybinds Tab
+            Rectangle {
+              implicitWidth: allTabLabel.implicitWidth + Style.space(12)
+              implicitHeight: Style.space(22)
+              radius: Style.space(4)
+              color: root.currentTab === "all" && root.searchQuery === ""
+                ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.22)
+                : Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.08)
+
+              Text {
+                id: allTabLabel
+                anchors.centerIn: parent
+                text: "📋 All Keybinds"
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                font.bold: root.currentTab === "all"
+                color: root.currentTab === "all" && root.searchQuery === "" ? Color.accent : Color.foreground
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  root.currentTab = "all"
+                  searchField.text = ""
+                  root.searchQuery = ""
+                }
+              }
+            }
+          }
+
           Item { Layout.fillWidth: true }
 
-          // Quick Hint
+          // Keyboard hint
           Text {
-            text: "Press / to search · Esc to close"
+            text: "Press / to search"
             font.family: Style.font.family
             font.pixelSize: Style.font.caption - 1
             color: Qt.darker(Color.popups.text, 1.6)
@@ -199,7 +266,7 @@ Panel {
         TextField {
           id: searchField
           Layout.fillWidth: true
-          placeholderText: "Search shortcuts (e.g. split, brave, terminal, workspace)..."
+          placeholderText: "Search shortcuts (e.g. terminal, split, workspace, float)..."
           onTextChanged: root.searchQuery = text
 
           Keys.onEscapePressed: {
@@ -212,18 +279,18 @@ Panel {
           }
         }
 
-        // Active Window Context Banner
+        // Active Window Status Banner
         ContextHeader {
           Layout.fillWidth: true
-          categoryLabel: root.categoryInfo.label
-          categoryIcon: root.categoryInfo.icon
-          windowTitle: root.rawActive.title || (root.toplevel ? root.toplevel.title : "No window focused")
+          categoryLabel: root.activeApp.label
+          categoryIcon: root.activeApp.icon
+          windowTitle: root.rawActive.title || (root.toplevel ? root.toplevel.title : "No active window")
           workspaceName: (root.rawActive.workspace && root.rawActive.workspace.name) ? String(root.rawActive.workspace.name) : "1"
           isFloating: root.rawActive.floating === true
           isFullscreen: root.rawActive.fullscreen !== undefined && root.rawActive.fullscreen !== 0
         }
 
-        // Scrollable Suggestions Body
+        // Scrollable Body
         Flickable {
           id: flick
           Layout.fillWidth: true
@@ -239,13 +306,15 @@ Panel {
           Column {
             id: scrollColumn
             width: flick.width
-            spacing: Style.space(8)
+            spacing: Style.space(6)
 
-            // When searching
+            // -----------------------------------------------------------
+            // VIEW A: SEARCH RESULTS
+            // -----------------------------------------------------------
             Column {
               visible: root.searchQuery !== ""
               width: parent.width
-              spacing: Style.space(6)
+              spacing: Style.space(4)
 
               PanelSectionHeader {
                 text: "MATCHING SHORTCUTS (" + root.searchResults.length + ")"
@@ -273,93 +342,160 @@ Panel {
                 font.pixelSize: Style.font.body
                 color: Qt.darker(Color.popups.text, 1.5)
                 horizontalAlignment: Text.AlignHCenter
-                topPadding: Style.space(20)
+                topPadding: Style.space(16)
               }
             }
 
-            // Normal smart context view (not searching)
+            // -----------------------------------------------------------
+            // VIEW B: SMART CONTEXT GUIDE (DEFAULT)
+            // -----------------------------------------------------------
             Column {
-              visible: root.searchQuery === ""
+              visible: root.searchQuery === "" && root.currentTab === "context"
               width: parent.width
-              spacing: Style.space(8)
+              spacing: Style.space(6)
 
-              // Interactive Tip Banner
-              TipBanner {
+              // 1. Switch to Open Windows (Top Priority)
+              Column {
+                visible: root.smartNav.openTasks.length > 0
                 width: parent.width
-              }
+                spacing: Style.space(4)
 
-              PanelSeparator {
-                width: parent.width
-              }
+                PanelSectionHeader {
+                  text: "SWITCH TO RUNNING APPS (" + root.smartNav.openTasks.length + ")"
+                }
 
-              PanelSectionHeader {
-                text: "CONTEXTUAL SUGGESTIONS (" + (root.rawClients.length) + " WINDOW" + (root.rawClients.length === 1 ? "" : "S") + " OPEN)"
-              }
+                Repeater {
+                  model: root.smartNav.openTasks
+                  delegate: SuggestionCard {
+                    width: parent.width
+                    title: modelData.title
+                    desc: modelData.desc
+                    keyString: modelData.key
+                    icon: modelData.icon
+                    action: modelData.action
+                    badgeText: modelData.badge
+                    onTriggered: function(cmd) { root.executeAction(cmd) }
+                  }
+                }
 
-              Repeater {
-                model: root.smartSuggestions
-                delegate: SuggestionCard {
+                PanelSeparator {
                   width: parent.width
-                  title: modelData.title
-                  desc: modelData.desc
-                  keyString: modelData.key
-                  icon: modelData.icon
-                  action: modelData.action
-                  badgeText: modelData.badge
-                  onTriggered: function(cmd) { root.executeAction(cmd) }
+                  topPadding: Style.space(2)
+                  bottomPadding: Style.space(2)
                 }
               }
 
-              PanelSeparator {
+              // 2. In-App Navigation / Tabs (if in browser, editor, terminal)
+              Column {
+                visible: root.smartNav.inAppTabs.length > 0
                 width: parent.width
+                spacing: Style.space(4)
+
+                PanelSectionHeader {
+                  text: root.activeApp.label.toUpperCase() + " TAB & IN-APP SHORTCUTS"
+                }
+
+                Repeater {
+                  model: root.smartNav.inAppTabs
+                  delegate: SuggestionCard {
+                    width: parent.width
+                    title: modelData.title
+                    desc: modelData.desc
+                    keyString: modelData.key
+                    icon: modelData.icon
+                    action: modelData.action
+                    badgeText: modelData.badge
+                    onTriggered: function(cmd) { root.executeAction(cmd) }
+                  }
+                }
+
+                PanelSeparator {
+                  width: parent.width
+                  topPadding: Style.space(2)
+                  bottomPadding: Style.space(2)
+                }
               }
+
+              // 3. Current Window Controls
+              Column {
+                visible: root.smartNav.currentWindow.length > 0
+                width: parent.width
+                spacing: Style.space(4)
+
+                PanelSectionHeader {
+                  text: "CURRENT WINDOW CONTROLS"
+                }
+
+                Repeater {
+                  model: root.smartNav.currentWindow
+                  delegate: SuggestionCard {
+                    width: parent.width
+                    title: modelData.title
+                    desc: modelData.desc
+                    keyString: modelData.key
+                    icon: modelData.icon
+                    action: modelData.action
+                    badgeText: modelData.badge
+                    onTriggered: function(cmd) { root.executeAction(cmd) }
+                  }
+                }
+
+                PanelSeparator {
+                  width: parent.width
+                  topPadding: Style.space(2)
+                  bottomPadding: Style.space(2)
+                }
+              }
+
+              // 4. Quick Launch / Workspaces
+              Column {
+                width: parent.width
+                spacing: Style.space(4)
+
+                PanelSectionHeader {
+                  text: "QUICK LAUNCH & WORKSPACES"
+                }
+
+                Repeater {
+                  model: root.smartNav.quickLaunch
+                  delegate: SuggestionCard {
+                    width: parent.width
+                    title: modelData.title
+                    desc: modelData.desc
+                    keyString: modelData.key
+                    icon: modelData.icon
+                    action: modelData.action
+                    badgeText: modelData.badge
+                    onTriggered: function(cmd) { root.executeAction(cmd) }
+                  }
+                }
+              }
+            }
+
+            // -----------------------------------------------------------
+            // VIEW C: ALL KEYBINDS (BROWSE CATALOG)
+            // -----------------------------------------------------------
+            Column {
+              visible: root.searchQuery === "" && root.currentTab === "all"
+              width: parent.width
+              spacing: Style.space(4)
 
               PanelSectionHeader {
-                text: "GLOBAL WORKSPACES & SHORTCUTS"
+                text: "ALL NAVIGATION & WINDOW KEYBINDINGS"
               }
 
-              SuggestionCard {
-                width: parent.width
-                title: "Switch to Workspace 1"
-                desc: "Hop to virtual workspace 1"
-                keyString: "SUPER + 1"
-                icon: "󰄲"
-                badgeText: "WS 1"
-                action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"1\" })'"
-                onTriggered: function(cmd) { root.executeAction(cmd) }
-              }
-
-              SuggestionCard {
-                width: parent.width
-                title: "Switch to Workspace 2"
-                desc: "Hop to virtual workspace 2"
-                keyString: "SUPER + 2"
-                icon: "󰄲"
-                badgeText: "WS 2"
-                action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"2\" })'"
-                onTriggered: function(cmd) { root.executeAction(cmd) }
-              }
-
-              SuggestionCard {
-                width: parent.width
-                title: "Open Omarchy Menu"
-                desc: "Search applications, power options, and tools"
-                keyString: "SUPER + SPACE"
-                icon: "󰍜"
-                badgeText: "Menu"
-                action: "omarchy-menu toggle"
-                onTriggered: function(cmd) { root.executeAction(cmd) }
-              }
-
-              SuggestionCard {
-                width: parent.width
-                title: "Full Keybindings Explorer"
-                desc: "Interactive searchable list of all active keybinds"
-                keyString: "SUPER + K"
-                icon: "󰌌"
-                badgeText: "All Keys"
-                action: "omarchy-menu-keybindings"
-                onTriggered: function(cmd) { root.executeAction(cmd) }
+              Repeater {
+                model: TipCatalog.allShortcuts
+                delegate: SuggestionCard {
+                  width: parent.width
+                  title: modelData.desc
+                  desc: "Category: " + modelData.category.toUpperCase()
+                  keyString: modelData.key
+                  icon: modelData.icon
+                  action: modelData.action
+                  badgeText: modelData.category
+                  onTriggered: function(cmd) { root.executeAction(cmd) }
+                }
               }
             }
           }

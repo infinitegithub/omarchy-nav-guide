@@ -1,15 +1,15 @@
 .pragma library
 
-function detectCategory(appId, title) {
+function detectAppInfo(appId, title) {
   var id = String(appId || "").toLowerCase();
   var t = String(title || "").toLowerCase();
 
   if (!id && !t) {
     return {
-      category: "desktop",
+      type: "desktop",
       label: "Desktop",
       icon: "󰇄",
-      description: "No window focused"
+      appCategory: "system"
     };
   }
 
@@ -18,11 +18,16 @@ function detectCategory(appId, title) {
       id.indexOf("firefox") !== -1 || id.indexOf("brave") !== -1 ||
       id.indexOf("zen") !== -1 || id.indexOf("opera") !== -1 ||
       id.indexOf("vivaldi") !== -1 || id.indexOf("edge") !== -1) {
+    var name = "Browser";
+    if (id.indexOf("brave") !== -1) name = "Brave";
+    else if (id.indexOf("firefox") !== -1) name = "Firefox";
+    else if (id.indexOf("chrome") !== -1) name = "Chrome";
+    else if (id.indexOf("zen") !== -1) name = "Zen";
     return {
-      category: "browser",
-      label: "Web Browser (" + (appId || "Browser") + ")",
+      type: "browser",
+      label: name,
       icon: "󰖟",
-      description: "Web browsing"
+      appCategory: "web"
     };
   }
 
@@ -31,11 +36,16 @@ function detectCategory(appId, title) {
       id.indexOf("kitty") !== -1 || id.indexOf("alacritty") !== -1 ||
       id.indexOf("terminal") !== -1 || id.indexOf("wezterm") !== -1 ||
       t.indexOf("tmux") !== -1 || id.indexOf("xterm") !== -1) {
+    var term = "Terminal";
+    if (id.indexOf("ghostty") !== -1) term = "Ghostty";
+    else if (id.indexOf("foot") !== -1) term = "Foot";
+    else if (id.indexOf("kitty") !== -1) term = "Kitty";
+    else if (id.indexOf("alacritty") !== -1) term = "Alacritty";
     return {
-      category: "terminal",
-      label: "Terminal (" + (appId || "Terminal") + ")",
+      type: "terminal",
+      label: term,
       icon: "󰞷",
-      description: "Command line shell"
+      appCategory: "dev"
     };
   }
 
@@ -44,11 +54,16 @@ function detectCategory(appId, title) {
       id.indexOf("vscodium") !== -1 || id.indexOf("nvim") !== -1 ||
       id.indexOf("neovim") !== -1 || id.indexOf("zed") !== -1 ||
       id.indexOf("emacs") !== -1 || id.indexOf("cursor") !== -1) {
+    var ed = "Code Editor";
+    if (id.indexOf("antigravity") !== -1) ed = "Antigravity";
+    else if (id.indexOf("code") !== -1) ed = "VS Code";
+    else if (id.indexOf("nvim") !== -1 || id.indexOf("neovim") !== -1) ed = "Neovim";
+    else if (id.indexOf("zed") !== -1) ed = "Zed";
     return {
-      category: "editor",
-      label: "Code Editor (" + (appId || "Editor") + ")",
+      type: "editor",
+      label: ed,
       icon: "󰨞",
-      description: "Code and document editing"
+      appCategory: "dev"
     };
   }
 
@@ -57,255 +72,219 @@ function detectCategory(appId, title) {
       id.indexOf("dolphin") !== -1 || id.indexOf("pcmanfm") !== -1 ||
       id.indexOf("nemo") !== -1 || id.indexOf("yazi") !== -1) {
     return {
-      category: "filemanager",
-      label: "File Manager (" + (appId || "Files") + ")",
+      type: "filemanager",
+      label: "Files",
       icon: "󰉋",
-      description: "File manager"
+      appCategory: "files"
     };
   }
 
-  // Media Players
+  // Media
   if (id.indexOf("spotify") !== -1 || id.indexOf("vlc") !== -1 ||
-      id.indexOf("mpv") !== -1 || id.indexOf("amberol") !== -1 ||
-      id.indexOf("rhythmbox") !== -1 || id.indexOf("feh") !== -1) {
+      id.indexOf("mpv") !== -1 || id.indexOf("amberol") !== -1) {
     return {
-      category: "media",
-      label: "Media (" + (appId || "Player") + ")",
+      type: "media",
+      label: "Media",
       icon: "󰝚",
-      description: "Audio/Video media"
+      appCategory: "media"
     };
   }
 
   var display = appId ? (appId.charAt(0).toUpperCase() + appId.slice(1)) : "Application";
   return {
-    category: "general",
+    type: "general",
     label: display,
     icon: "󰣆",
-    description: "Application window"
+    appCategory: "app"
   };
 }
 
-// Determines spatial direction of client relative to active window
-function calculateRelativeDirection(currentAt, clientAt) {
-  if (!currentAt || !clientAt || currentAt.length < 2 || clientAt.length < 2) return null;
-  var curX = currentAt[0];
-  var curY = currentAt[1];
-  var cliX = clientAt[0];
-  var cliY = clientAt[1];
+function calculateRelativeDirection(curAt, cliAt) {
+  if (!curAt || !cliAt || curAt.length < 2 || cliAt.length < 2) return null;
+  var dx = cliAt[0] - curAt[0];
+  var dy = cliAt[1] - curAt[1];
 
-  var dx = cliX - curX;
-  var dy = cliY - curY;
-
-  // Prioritize horizontal vs vertical based on larger offset
   if (Math.abs(dx) >= Math.abs(dy)) {
-    if (dx < 0) return { dir: "left", label: "Left", hyprDir: "l", key: "SUPER + Left / H", swapKey: "SUPER + SHIFT + Left" };
-    if (dx > 0) return { dir: "right", label: "Right", hyprDir: "r", key: "SUPER + Right / L", swapKey: "SUPER + SHIFT + Right" };
+    if (dx < 0) return { label: "Left", hyprDir: "l", key: "SUPER + Left / H", swapKey: "SUPER + SHIFT + Left" };
+    if (dx > 0) return { label: "Right", hyprDir: "r", key: "SUPER + Right / L", swapKey: "SUPER + SHIFT + Right" };
   } else {
-    if (dy < 0) return { dir: "above", label: "Above", hyprDir: "u", key: "SUPER + Up / K", swapKey: "SUPER + SHIFT + Up" };
-    if (dy > 0) return { dir: "below", label: "Below", hyprDir: "d", key: "SUPER + Down / J", swapKey: "SUPER + SHIFT + Down" };
+    if (dy < 0) return { label: "Above", hyprDir: "u", key: "SUPER + Up / K", swapKey: "SUPER + SHIFT + Up" };
+    if (dy > 0) return { label: "Below", hyprDir: "d", key: "SUPER + Down / J", swapKey: "SUPER + SHIFT + Down" };
   }
   return null;
 }
 
-function getAppIcon(className) {
-  var c = String(className || "").toLowerCase();
-  if (c.indexOf("brave") !== -1 || c.indexOf("chrome") !== -1 || c.indexOf("firefox") !== -1 || c.indexOf("zen") !== -1) return "󰖟";
-  if (c.indexOf("ghostty") !== -1 || c.indexOf("foot") !== -1 || c.indexOf("kitty") !== -1 || c.indexOf("terminal") !== -1) return "󰞷";
-  if (c.indexOf("antigravity") !== -1 || c.indexOf("code") !== -1 || c.indexOf("nvim") !== -1) return "󰨞";
-  if (c.indexOf("thunar") !== -1 || c.indexOf("nautilus") !== -1 || c.indexOf("dolphin") !== -1) return "󰉋";
-  if (c.indexOf("spotify") !== -1 || c.indexOf("vlc") !== -1 || c.indexOf("mpv") !== -1) return "󰝚";
-  return "󰣆";
-}
-
-function cleanTitle(title, className) {
+function truncateTitle(title, fallback) {
   var t = String(title || "").trim();
-  if (!t || t.length === 0) return className || "Window";
-  if (t.length > 34) return t.substring(0, 31) + "...";
+  if (!t) return fallback || "Window";
+  if (t.length > 28) return t.substring(0, 25) + "...";
   return t;
 }
 
-// Build smart suggestions based on where you are and ALL open windows
-function buildSmartSuggestions(activeWin, allClients) {
-  var suggestions = [];
+function buildSmartNavigation(activeWin, allClients) {
   var curAddr = activeWin ? activeWin.address : "";
   var curWsId = (activeWin && activeWin.workspace) ? activeWin.workspace.id : 1;
   var curAt = activeWin ? activeWin.at : [0, 0];
-  var catInfo = detectCategory(activeWin ? activeWin.class : "", activeWin ? activeWin.title : "");
+  var curApp = detectAppInfo(activeWin ? activeWin.class : "", activeWin ? activeWin.title : "");
 
   var clients = Array.isArray(allClients) ? allClients : [];
-  var sameWorkspaceOthers = [];
-  var otherWorkspaceOthers = [];
 
-  var hasTerminalRunning = false;
-  var hasBrowserRunning = false;
-  var hasFileManagerRunning = false;
+  var sections = {
+    openTasks: [],      // Switch to other running apps
+    currentWindow: [],  // Tiling, floating, split, close
+    inAppTabs: [],      // In-app tab and document switching
+    quickLaunch: []     // New instances or unopened apps
+  };
+
+  var hasTerminal = false;
+  var hasBrowser = false;
+  var hasFileManager = false;
+
+  var sameWsOthers = [];
+  var otherWsOthers = [];
 
   for (var i = 0; i < clients.length; i++) {
     var c = clients[i];
-    var cClass = String(c.class || "").toLowerCase();
+    var info = detectAppInfo(c.class, c.title);
 
-    // Check running app presence
-    if (cClass.indexOf("foot") !== -1 || cClass.indexOf("ghostty") !== -1 || cClass.indexOf("kitty") !== -1 || cClass.indexOf("terminal") !== -1 || cClass.indexOf("alacritty") !== -1) {
-      hasTerminalRunning = true;
-    }
-    if (cClass.indexOf("brave") !== -1 || cClass.indexOf("chrome") !== -1 || cClass.indexOf("firefox") !== -1 || cClass.indexOf("zen") !== -1 || cClass.indexOf("chromium") !== -1) {
-      hasBrowserRunning = true;
-    }
-    if (cClass.indexOf("thunar") !== -1 || cClass.indexOf("nautilus") !== -1 || cClass.indexOf("dolphin") !== -1) {
-      hasFileManagerRunning = true;
-    }
+    if (info.type === "terminal") hasTerminal = true;
+    if (info.type === "browser") hasBrowser = true;
+    if (info.type === "filemanager") hasFileManager = true;
 
-    if (c.address === curAddr) continue; // Skip active window
+    if (c.address === curAddr) continue;
 
     if (c.workspace && c.workspace.id === curWsId) {
-      sameWorkspaceOthers.push(c);
+      sameWsOthers.push({ client: c, info: info });
     } else if (c.workspace) {
-      otherWorkspaceOthers.push(c);
+      otherWsOthers.push({ client: c, info: info });
     }
   }
 
   // -------------------------------------------------------------
-  // 1. Same-workspace directional navigation (Side-by-side windows)
+  // 1. SWITCH TO EXISTING OPEN WINDOWS (PRIORITY)
   // -------------------------------------------------------------
-  for (var s = 0; s < sameWorkspaceOthers.length; s++) {
-    var sibling = sameWorkspaceOthers[s];
-    var rel = calculateRelativeDirection(curAt, sibling.at);
-    var sibTitle = cleanTitle(sibling.title, sibling.class);
-    var sibIcon = getAppIcon(sibling.class);
+  // Same workspace (side-by-side)
+  for (var s = 0; s < sameWsOthers.length; s++) {
+    var item = sameWsOthers[s];
+    var rel = calculateRelativeDirection(curAt, item.client.at);
+    var label = item.info.label;
+    var title = truncateTitle(item.client.title, label);
 
     if (rel) {
-      // Focus directional shortcut
-      suggestions.push({
+      sections.openTasks.push({
         key: rel.key,
-        title: "Focus " + sibTitle + " (" + rel.label + ")",
-        desc: "Adjacent window tiled to your " + rel.label.toLowerCase(),
-        icon: sibIcon,
-        badge: rel.label,
-        action: "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + sibling.address + "\" })")
+        title: "Switch to " + label + " (" + rel.label + ")",
+        desc: title,
+        icon: item.info.icon,
+        badge: "Switch (" + rel.label + ")",
+        action: "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + item.client.address + "\" })")
       });
-
-      // Swap directional shortcut
-      suggestions.push({
+      sections.openTasks.push({
         key: rel.swapKey,
-        title: "Swap with " + sibTitle,
-        desc: "Swap current window with the window on your " + rel.label.toLowerCase(),
+        title: "Swap with " + label,
+        desc: "Swap side-by-side position",
         icon: "󰤉",
         badge: "Swap",
         action: "hyprctl dispatch " + shellQuote("hl.dsp.window.swap({ direction = \"" + rel.hyprDir + "\" })")
       });
     } else {
-      // General sibling focus
-      suggestions.push({
+      sections.openTasks.push({
         key: "ALT + TAB",
-        title: "Focus " + sibTitle,
-        desc: "Cycle to other window on this workspace",
-        icon: sibIcon,
-        badge: "Same WS",
-        action: "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + sibling.address + "\" })")
+        title: "Switch to " + label,
+        desc: title,
+        icon: item.info.icon,
+        badge: "Switch",
+        action: "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + item.client.address + "\" })")
       });
     }
   }
 
-  // -------------------------------------------------------------
-  // 2. Other-workspace open window jumping
-  // -------------------------------------------------------------
-  for (var o = 0; o < otherWorkspaceOthers.length; o++) {
-    var other = otherWorkspaceOthers[o];
-    var wsName = String(other.workspace ? other.workspace.name : "");
-    var oTitle = cleanTitle(other.title, other.class);
-    var oIcon = getAppIcon(other.class);
+  // Other workspaces
+  for (var o = 0; o < otherWsOthers.length; o++) {
+    var other = otherWsOthers[o];
+    var ws = String(other.client.workspace ? other.client.workspace.name : "");
+    var oLabel = other.info.label;
+    var oTitle = truncateTitle(other.client.title, oLabel);
 
-    suggestions.push({
-      key: "SUPER + " + wsName,
-      title: "Jump to " + oTitle + " (WS " + wsName + ")",
-      desc: "Open on Workspace " + wsName + " · Click to switch and focus",
-      icon: oIcon,
-      badge: "WS " + wsName,
-      action: "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + other.address + "\" })")
+    sections.openTasks.push({
+      key: "SUPER + " + ws,
+      title: "Switch to " + oLabel + " (WS " + ws + ")",
+      desc: oTitle,
+      icon: other.info.icon,
+      badge: "WS " + ws,
+      action: "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + other.client.address + "\" })")
     });
   }
 
   // -------------------------------------------------------------
-  // 3. Recommended apps to launch (if not already running)
+  // 2. IN-APP TAB / NAVIGATION SHORTCUTS
   // -------------------------------------------------------------
-  if (!hasTerminalRunning) {
-    suggestions.push({
-      key: "SUPER + RETURN",
-      title: "Launch Terminal",
-      desc: "No terminal open · Launch a new terminal session",
-      icon: "󰞷",
-      badge: "Launch",
-      action: "omarchy-launch-terminal"
-    });
-  }
-  if (!hasBrowserRunning) {
-    suggestions.push({
-      key: "SUPER + SHIFT + RETURN",
-      title: "Launch Web Browser",
-      desc: "No browser open · Launch your default web browser",
-      icon: "󰖟",
-      badge: "Launch",
-      action: "omarchy-launch-browser"
-    });
-  }
-  if (!hasFileManagerRunning) {
-    suggestions.push({
-      key: "SUPER + SHIFT + F",
-      title: "Launch File Manager",
-      desc: "Browse storage and documents",
-      icon: "󰉋",
-      badge: "Files",
-      action: "omarchy-launch-file-manager"
-    });
+  if (curApp.type === "browser") {
+    sections.inAppTabs.push({ key: "Ctrl + Tab", title: "Next Browser Tab", desc: "Cycle to next open tab", icon: "󰖟", badge: "Tab", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + Shift + Tab", title: "Previous Tab", desc: "Cycle to previous tab", icon: "󰖟", badge: "Tab", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + L", title: "Focus Address Bar", desc: "Jump to URL / search input", icon: "󰖟", badge: "URL", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + T", title: "New Tab in Browser", desc: "Open a fresh tab", icon: "󰖟", badge: "New Tab", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + W", title: "Close Tab", desc: "Close current browser tab", icon: "󰅖", badge: "Tab", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + Shift + T", title: "Reopen Closed Tab", desc: "Restore last closed tab", icon: "󰖟", badge: "Tab", action: "" });
+  } else if (curApp.type === "editor") {
+    sections.inAppTabs.push({ key: "Ctrl + PageDown", title: "Next Editor Tab", desc: "Switch to next open file", icon: "󰨞", badge: "Tab", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + PageUp", title: "Previous Editor Tab", desc: "Switch to previous open file", icon: "󰨞", badge: "Tab", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + P", title: "Quick Open File", desc: "Fuzzy search files in project", icon: "󰨞", badge: "Files", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + Shift + P", title: "Command Palette", desc: "Search editor actions", icon: "󰨞", badge: "Action", action: "" });
+  } else if (curApp.type === "terminal") {
+    sections.inAppTabs.push({ key: "SUPER + ALT + RETURN", title: "Launch Tmux Session", desc: "Terminal tabs & splits multiplexer", icon: "󰒍", badge: "Tmux", action: "omarchy-launch-terminal tmux" });
+    sections.inAppTabs.push({ key: "SUPER + CTRL + RETURN", title: "Toggle Herdr Scratchpad", desc: "Slide out persistent terminal", icon: "󰖮", badge: "Scratchpad", action: "omarchy-launch-herdr" });
+    sections.inAppTabs.push({ key: "Ctrl + Shift + V", title: "Paste into Terminal", desc: "Paste from clipboard", icon: "󰅌", badge: "Edit", action: "" });
+    sections.inAppTabs.push({ key: "Ctrl + L", title: "Clear Screen", desc: "Reset terminal view", icon: "󰞷", badge: "Screen", action: "" });
   }
 
   // -------------------------------------------------------------
-  // 4. Current Window Controls
+  // 3. CURRENT WINDOW CONTROLS
   // -------------------------------------------------------------
   if (activeWin && activeWin.address) {
     var isFloat = activeWin.floating === true;
     var isFull = (activeWin.fullscreen !== undefined && activeWin.fullscreen !== 0);
 
-    suggestions.push({
+    sections.currentWindow.push({
       key: "SUPER + T",
       title: isFloat ? "Tile Window Back" : "Float Window",
-      desc: isFloat ? "Return window to tiling layout" : "Float window above the grid",
+      desc: isFloat ? "Return to automatic tiling grid" : "Float freely over windows",
       icon: "󰉦",
       badge: isFloat ? "Floating" : "Tiled",
       action: "hyprctl dispatch " + shellQuote("hl.dsp.window.float({ action = \"toggle\" })")
     });
 
-    suggestions.push({
+    sections.currentWindow.push({
       key: "SUPER + J",
-      title: "Toggle Window Split",
-      desc: "Toggle between horizontal and vertical split orientation",
+      title: "Toggle Split Orientation",
+      desc: "Switch between horizontal & vertical splits",
       icon: "󰤉",
-      badge: "Layout",
+      badge: "Split",
       action: "hyprctl dispatch " + shellQuote("hl.dsp.layout(\"togglesplit\")")
     });
 
-    suggestions.push({
+    sections.currentWindow.push({
       key: "SUPER + F",
-      title: isFull ? "Exit Fullscreen" : "Fullscreen",
-      desc: isFull ? "Restore normal window size" : "Expand window across full display",
+      title: isFull ? "Exit Fullscreen" : "Fullscreen Focus",
+      desc: isFull ? "Restore tiled view" : "Distraction-free fullscreen",
       icon: "󰊓",
       badge: "View",
       action: "hyprctl dispatch " + shellQuote("hl.dsp.window.fullscreen({ mode = \"fullscreen\" })")
     });
 
-    suggestions.push({
+    sections.currentWindow.push({
       key: "SUPER + O",
       title: "Pop Out & Pin (PIP)",
-      desc: "Float and pin this window across all workspaces",
+      desc: "Float and pin across all workspaces",
       icon: "󰐃",
       badge: "Pin",
       action: "omarchy-hyprland-window-pop"
     });
 
-    suggestions.push({
+    sections.currentWindow.push({
       key: "SUPER + W",
       title: "Close This Window",
-      desc: "Close the currently focused window safely",
+      desc: "Safely close active window",
       icon: "󰅖",
       badge: "Close",
       action: "hyprctl dispatch " + shellQuote("hl.dsp.window.close()")
@@ -313,55 +292,46 @@ function buildSmartSuggestions(activeWin, allClients) {
   }
 
   // -------------------------------------------------------------
-  // 5. In-App Navigation Cheatsheet (App-Specific)
+  // 4. QUICK LAUNCH / UNOPENED APPS (OR NEW INSTANCES)
   // -------------------------------------------------------------
-  if (catInfo.category === "browser") {
-    suggestions.push({ key: "Ctrl + L", title: "Focus Address / Search Bar", desc: "Instantly type a new URL or search query", icon: "󰖟", badge: "In-Browser", action: "" });
-    suggestions.push({ key: "Ctrl + T", title: "New Browser Tab", desc: "Open a fresh tab in current window", icon: "󰖟", badge: "In-Browser", action: "" });
-    suggestions.push({ key: "Ctrl + Tab", title: "Cycle to Next Tab", desc: "Hop forward through open tabs", icon: "󰖟", badge: "In-Browser", action: "" });
-    suggestions.push({ key: "Ctrl + Shift + T", title: "Reopen Closed Tab", desc: "Restore the tab you just closed", icon: "󰖟", badge: "In-Browser", action: "" });
-  } else if (catInfo.category === "terminal") {
-    suggestions.push({ key: "SUPER + ALT + RETURN", title: "Launch Tmux", desc: "Terminal multiplexer session", icon: "󰒍", badge: "Terminal", action: "omarchy-launch-terminal tmux" });
-    suggestions.push({ key: "SUPER + CTRL + RETURN", title: "Launch Herdr (Scratchpad)", desc: "Slide out persistent terminal scratchpad", icon: "󰖮", badge: "Terminal", action: "omarchy-launch-herdr" });
-    suggestions.push({ key: "Ctrl + Shift + V", title: "Paste into Terminal", desc: "Paste clipboard contents into command line", icon: "󰅌", badge: "Terminal", action: "" });
-    suggestions.push({ key: "Ctrl + L", title: "Clear Screen", desc: "Reset terminal view buffer", icon: "󰞷", badge: "Terminal", action: "" });
-  } else if (catInfo.category === "editor") {
-    suggestions.push({ key: "Ctrl + P", title: "Quick Open File", desc: "Search and jump to any project file", icon: "󰨞", badge: "In-Editor", action: "" });
-    suggestions.push({ key: "Ctrl + Shift + P", title: "Command Palette", desc: "Access all editor commands and settings", icon: "󰨞", badge: "In-Editor", action: "" });
-    suggestions.push({ key: "Ctrl + `", title: "Toggle Built-in Terminal", desc: "Open integrated editor terminal drawer", icon: "󰨞", badge: "In-Editor", action: "" });
-  }
+  // If not running: primary launch. If running: new instance.
+  sections.quickLaunch.push({
+    key: "SUPER + RETURN",
+    title: hasTerminal ? "Open New Terminal" : "Launch Terminal",
+    desc: hasTerminal ? "Open an additional terminal window" : "Start a new terminal session",
+    icon: "󰞷",
+    badge: hasTerminal ? "New Window" : "Launch",
+    action: "omarchy-launch-terminal"
+  });
 
-  // -------------------------------------------------------------
-  // 6. Global Omarchy Launchers & Workspaces
-  // -------------------------------------------------------------
-  suggestions.push({
+  sections.quickLaunch.push({
+    key: "SUPER + SHIFT + RETURN",
+    title: hasBrowser ? "Open New Browser Window" : "Launch Web Browser",
+    desc: hasBrowser ? "Open an additional browser window" : "Launch default browser",
+    icon: "󰖟",
+    badge: hasBrowser ? "New Window" : "Launch",
+    action: "omarchy-launch-browser"
+  });
+
+  sections.quickLaunch.push({
+    key: "SUPER + SHIFT + F",
+    title: "Launch File Manager",
+    desc: "Browse storage and documents",
+    icon: "󰉋",
+    badge: "Launch",
+    action: "omarchy-launch-file-manager"
+  });
+
+  sections.quickLaunch.push({
     key: "SUPER + SPACE",
     title: "Open Omarchy Menu",
-    desc: "Search apps, power options, and system workflows",
+    desc: "Search apps, power, and workflows",
     icon: "󰍜",
     badge: "Menu",
     action: "omarchy-menu toggle"
   });
 
-  suggestions.push({
-    key: "SUPER + CTRL + V",
-    title: "Clipboard History",
-    desc: "Browse and paste from clipboard manager",
-    icon: "󰅌",
-    badge: "Tools",
-    action: "omarchy-shell shell summon omarchy.clipboard '{}'"
-  });
-
-  suggestions.push({
-    key: "SUPER + K",
-    title: "All Keybindings Explorer",
-    desc: "Search every active Hyprland keybinding",
-    icon: "󰌌",
-    badge: "Cheatsheet",
-    action: "omarchy-menu-keybindings"
-  });
-
-  return suggestions;
+  return sections;
 }
 
 function shellQuote(s) {
@@ -371,7 +341,6 @@ function shellQuote(s) {
 
 function parseKeys(keyString) {
   if (!keyString) return [];
-  // Split on "/" or "+"
   var raw = String(keyString).split("+");
   var res = [];
   for (var i = 0; i < raw.length; i++) {

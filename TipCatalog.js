@@ -93,14 +93,18 @@ var allShortcuts = [
   { key: "SUPER + CTRL + RETURN", desc: "Launch Herdr (Scratchpad)", category: "apps", icon: "󰖮", action: "omarchy-launch-herdr" },
   { key: "SUPER + SHIFT + B", desc: "Launch Browser", category: "apps", icon: "󰖟", action: "omarchy-launch-browser" },
   { key: "SUPER + SHIFT + ALT + B", desc: "Browser (Private Window)", category: "apps", icon: "󰗹", action: "omarchy-launch-browser-private" },
+  { key: "SUPER + SHIFT + ALT + F", desc: "File Manager (Current Folder)", category: "apps", icon: "󰉋", action: "omarchy-launch-file-manager-cwd" },
 
-  // Window Management (all mapped to exact Omarchy Lua dispatchers)
+  // Window Management
   { key: "SUPER + W", desc: "Close Focused Window", category: "window", icon: "󰅖", action: "hyprctl dispatch 'hl.dsp.window.close()'" },
   { key: "SUPER + T", desc: "Toggle Floating / Tiling", category: "window", icon: "󰉦", action: "hyprctl dispatch 'hl.dsp.window.float({ action = \"toggle\" })'" },
   { key: "SUPER + F", desc: "Toggle Fullscreen", category: "window", icon: "󰊓", action: "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'" },
   { key: "SUPER + ALT + F", desc: "Toggle Full Width", category: "window", icon: "󰁌", action: "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'" },
   { key: "SUPER + J", desc: "Toggle Split Orientation", category: "window", icon: "󰤉", action: "hyprctl dispatch 'hl.dsp.layout(\"togglesplit\")'" },
   { key: "SUPER + O", desc: "Pop Window Out (Float & Pin)", category: "window", icon: "󰐃", action: "omarchy-hyprland-window-pop" },
+  { key: "SUPER + P", desc: "Pseudo Tiling Mode", category: "window", icon: "󰹉", action: "hyprctl dispatch 'hl.dsp.window.pseudo()'" },
+  { key: "SUPER + G", desc: "Toggle Window Grouping", category: "window", icon: "󰏘", action: "hyprctl dispatch 'hl.dsp.group.toggle()'" },
+  { key: "SUPER + ALT + TAB", desc: "Next Window in Group", category: "window", icon: "󰹉", action: "hyprctl dispatch 'hl.dsp.group.next()'" },
   { key: "CTRL + ALT + DELETE", desc: "Close All Windows on Workspace", category: "window", icon: "󰅙", action: "omarchy-hyprland-window-close-all" },
 
   // Navigation & Directional Focus
@@ -123,8 +127,21 @@ var allShortcuts = [
   { key: "SUPER + 3", desc: "Switch to Workspace 3", category: "workspace", icon: "󰄲", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"3\" })'" },
   { key: "SUPER + 4", desc: "Switch to Workspace 4", category: "workspace", icon: "󰄲", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"4\" })'" },
   { key: "SUPER + 5", desc: "Switch to Workspace 5", category: "workspace", icon: "󰄲", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"5\" })'" },
+  { key: "SUPER + 6", desc: "Switch to Workspace 6", category: "workspace", icon: "󰄲", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"6\" })'" },
+  { key: "SUPER + 7", desc: "Switch to Workspace 7", category: "workspace", icon: "󰄲", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"7\" })'" },
+  { key: "SUPER + 8", desc: "Switch to Workspace 8", category: "workspace", icon: "󰄲", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"8\" })'" },
+  { key: "SUPER + 9", desc: "Switch to Workspace 9", category: "workspace", icon: "󰄲", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"9\" })'" },
+  { key: "SUPER + 0", desc: "Switch to Workspace 10", category: "workspace", icon: "󰄲", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"10\" })'" },
+
+  { key: "SUPER + SHIFT + 1..9", desc: "Move Window to Workspace 1-9", category: "workspace", icon: "󰪹", action: "" },
   { key: "SUPER + TAB", desc: "Next Workspace", category: "workspace", icon: "󰁔", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'" },
   { key: "SUPER + SHIFT + TAB", desc: "Previous Workspace", category: "workspace", icon: "󰁍", action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'" },
+  { key: "SUPER + S", desc: "Toggle Scratchpad", category: "workspace", icon: "󰖮", action: "hyprctl dispatch 'hl.dsp.workspace.toggle_special(\"scratchpad\")'" },
+  { key: "SUPER + ALT + S", desc: "Move Window to Scratchpad", category: "workspace", icon: "󰪹", action: "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:scratchpad\", follow = false })'" },
+
+  // Monitors
+  { key: "CTRL + ALT + TAB", desc: "Focus Next Monitor", category: "monitors", icon: "󰍹", action: "hyprctl dispatch 'hl.dsp.focus({ monitor = \"+1\" })'" },
+  { key: "CTRL + ALT + SHIFT + TAB", desc: "Focus Previous Monitor", category: "monitors", icon: "󰍹", action: "hyprctl dispatch 'hl.dsp.focus({ monitor = \"-1\" })'" },
 
   // Tools & System
   { key: "SUPER + K", desc: "Keybindings Search Explorer", category: "tools", icon: "󰌌", action: "omarchy-menu-keybindings" },
