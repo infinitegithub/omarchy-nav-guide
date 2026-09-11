@@ -56,6 +56,25 @@ To set `SUPER + K` to open Super+K Alternative:
 
 ---
 
+## 💾 Data & State Storage
+
+Super+K Alternative stores its minimal local state under `~/.local/state/omarchy/`:
+* `nav-guide-windows.json`: Ephemeral live window cache for instantaneous HUD loading.
+* `nav-guide-stats.json`: Local shortcut usage statistics and mastery streak counter.
+* `nav-guide-keybindings.json`: Cached system keybinding registry.
+
+### Uninstallation
+
+To restore standard Omarchy keybindings and remove the plugin:
+
+```bash
+~/.config/omarchy/plugins/nav-guide/bin/unregister-keybind
+omarchy plugin remove nav-guide
+rm -f ~/.local/state/omarchy/nav-guide-*
+```
+
+---
+
 ## 📄 License
 
 Distributed under the [MIT License](LICENSE).  

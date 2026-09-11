@@ -1,98 +1,5 @@
 .pragma library
 
-var generalTips = [
-  {
-    title: "Split Direction",
-    text: "Press SUPER + J to toggle whether your next window split opens horizontally or vertically.",
-    shortcut: "SUPER + J"
-  },
-  {
-    title: "Scratchpad Workspace",
-    text: "Press SUPER + S to toggle your floating scratchpad, or SUPER + ALT + S to send the active window there.",
-    shortcut: "SUPER + S"
-  },
-  {
-    title: "Instant Terminal",
-    text: "Press SUPER + RETURN to launch your terminal from anywhere without touching the mouse.",
-    shortcut: "SUPER + RETURN"
-  },
-  {
-    title: "Fast Web Browser",
-    text: "Press SUPER + SHIFT + RETURN to instantly open or focus your default web browser.",
-    shortcut: "SUPER + SHIFT + RETURN"
-  },
-  {
-    title: "App Launcher",
-    text: "Press SUPER + SPACE to open the Omarchy command launcher and find anything on your system.",
-    shortcut: "SUPER + SPACE"
-  },
-  {
-    title: "Float or Tile",
-    text: "Press SUPER + T to toggle the active window between floating and automatic tiling.",
-    shortcut: "SUPER + T"
-  },
-  {
-    title: "Pin Window (Picture-in-Picture)",
-    text: "Press SUPER + O to pop out a window, float it, and keep it pinned across all workspaces.",
-    shortcut: "SUPER + O"
-  },
-  {
-    title: "Distraction-Free Fullscreen",
-    text: "Press SUPER + F to toggle fullscreen mode, or SUPER + ALT + F for full-width view.",
-    shortcut: "SUPER + F"
-  },
-  {
-    title: "Toggle Window Gaps",
-    text: "Press SUPER + SHIFT + BACKSPACE to toggle inner and outer window gaps and borders.",
-    shortcut: "SUPER + SHIFT + BACKSPACE"
-  },
-  {
-    title: "Workspace Hopping",
-    text: "Press SUPER + 1 through 9 to jump directly to any workspace, or SUPER + 0 for workspace 10.",
-    shortcut: "SUPER + 1..9"
-  },
-  {
-    title: "Move Window to Workspace",
-    text: "Press SUPER + SHIFT + 1 through 9 to send the active window to another workspace.",
-    shortcut: "SUPER + SHIFT + 1..9"
-  },
-  {
-    title: "Clipboard History",
-    text: "Press SUPER + CTRL + V to browse and re-paste previous clipboard items.",
-    shortcut: "SUPER + CTRL + V"
-  },
-  {
-    title: "Emoji Picker",
-    text: "Press SUPER + CTRL + E to summon the graphical emoji overlay.",
-    shortcut: "SUPER + CTRL + E"
-  },
-  {
-    title: "File Manager",
-    text: "Press SUPER + SHIFT + F to open the file manager, or SUPER + SHIFT + ALT + F in the current directory.",
-    shortcut: "SUPER + SHIFT + F"
-  },
-  {
-    title: "Instant Screen Lock",
-    text: "Press SUPER + CTRL + L to immediately lock your screen with Omarchy's lock screen.",
-    shortcut: "SUPER + CTRL + L"
-  },
-  {
-    title: "Screen Capture",
-    text: "Press PRINT for interactive screenshot, or ALT + PRINT to start screen recording.",
-    shortcut: "PRINT"
-  },
-  {
-    title: "Close Window",
-    text: "Press SUPER + W to cleanly close the focused window.",
-    shortcut: "SUPER + W"
-  },
-  {
-    title: "Bar Transparency Trick",
-    text: "Double-click empty space on the status bar to instantly toggle transparent bar mode.",
-    shortcut: "Double-Click Bar"
-  }
-];
-
 var allShortcuts = [
   { key: "SUPER SHIFT + K", desc: "Classic Keybindings Menu", category: "system", icon: "󰍜", action: "omarchy-menu-keybindings" },
   { key: "SUPER + SPACE", desc: "Omarchy menu", category: "system", icon: "󰍜", action: "omarchy-menu toggle" },
@@ -191,8 +98,7 @@ var allShortcuts = [
   { key: "SUPER + BACKSPACE", desc: "Toggle window transparency", category: "window", icon: "󰉦", action: "omarchy-hyprland-window-transparency-toggle" },
   { key: "SUPER CTRL + N", desc: "Toggle nightlight", category: "system", icon: "󰐥", action: "omarchy-toggle-nightlight" },
   { key: "SUPER CTRL + I", desc: "Toggle locking on idle", category: "system", icon: "󰐥", action: "omarchy-toggle-idle" },
-  { key: "F9", desc: "Start dictation (push-to-talk)", category: "tools", icon: "󰃬", action: "voxtype record start" },
-  { key: "F9", desc: "Stop dictation (push-to-talk)", category: "tools", icon: "󰃬", action: "voxtype record stop" },
+  { key: "F9", desc: "Start/stop dictation (push-to-talk)", category: "tools", icon: "󰃬", action: "voxtype record toggle" },
   { key: "SHIFT ALT + D", desc: "Download Video from Web App", category: "apps", icon: "󰖟", action: "hyprctl dispatch sendshortcut \"SHIFT ALT,D,\"" },
   { key: "SHIFT ALT + L", desc: "Copy URL from Web App", category: "apps", icon: "󰖟", action: "hyprctl dispatch sendshortcut \"SHIFT ALT,L,\"" },
   { key: "SUPER ALT + A", desc: "Antigravity", category: "other", icon: "󰌌", action: "omarchy-launch-or-focus '^antigravity$' 'uwsm-app -- antigravity'" },

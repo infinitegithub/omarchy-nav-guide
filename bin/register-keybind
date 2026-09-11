@@ -4,6 +4,7 @@ set -euo pipefail
 
 BINDINGS_FILE="${HOME}/.config/hypr/bindings.lua"
 START_MARKER="-- [nav-guide-keybind]"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 mkdir -p "$(dirname "$BINDINGS_FILE")"
 
@@ -11,19 +12,10 @@ if [[ ! -f "$BINDINGS_FILE" ]]; then
   touch "$BINDINGS_FILE"
 fi
 
-# Ensure background Hyprland socket listener is running
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if ! pgrep -f "nav-guide/bin/hypr-listener" >/dev/null 2>&1; then
-  setsid python3 "$DIR/hypr-listener" </dev/null >/dev/null 2>&1 &
-fi
-
 # Check if nav-guide is already registered
-if grep -q -F -e "$START_MARKER" "$BINDINGS_FILE" || grep -q "omarchy-shell nav-guide toggle" "$BINDINGS_FILE"; then
-  exit 0
-fi
-
-# Append the isolated configuration block
-cat >> "$BINDINGS_FILE" <<'BLOCK'
+if ! grep -q -F -e "$START_MARKER" "$BINDINGS_FILE" && ! grep -q "omarchy-shell nav-guide toggle" "$BINDINGS_FILE"; then
+  # Append the isolated configuration block
+  cat >> "$BINDINGS_FILE" <<'BLOCK'
 
 -- [nav-guide-keybind]
 -- Enhanced Super+K window for Omarchy
@@ -34,13 +26,13 @@ o.bind("SUPER + SHIFT + K", "Classic Keybindings Menu", "omarchy-menu-keybinding
 -- [/nav-guide-keybind]
 BLOCK
 
-# Reload Hyprland config dynamically
-hyprctl reload >/dev/null 2>&1 || true
+  # Reload Hyprland config dynamically
+  hyprctl reload >/dev/null 2>&1 || true
+fi
 
 # Ensure background Hyprland socket listener is running
-if ! pgrep -f "bin/hypr-listener" >/dev/null 2>&1; then
-  DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  nohup "$DIR/hypr-listener" >/dev/null 2>&1 &
+if ! pgrep -f "nav-guide/bin/hypr-listener" >/dev/null 2>&1; then
+  setsid python3 "$DIR/hypr-listener" </dev/null >/dev/null 2>&1 &
 fi
 
 # Send a notification to inform the user

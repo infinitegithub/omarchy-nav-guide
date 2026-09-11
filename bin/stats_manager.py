@@ -2,16 +2,18 @@
 """
 Stats and history manager for Navigation Guide (nav-guide).
 Handles atomic updates, chronological history logging, usage ranking,
-and daily active streaks.
+and daily active streaks with cross-process file locking.
 """
 import sys
 import os
 import json
 import time
+import fcntl
 from datetime import datetime, date
 
 STATE_DIR = os.path.expanduser("~/.local/state/omarchy")
 STATS_FILE = os.path.join(STATE_DIR, "nav-guide-stats.json")
+LOCK_FILE = os.path.join(STATE_DIR, "nav-guide-stats.lock")
 MAX_HISTORY = 100
 
 def synthesize_meta(key):
@@ -55,8 +57,7 @@ def synthesize_meta(key):
             return f"Switch to Workspace {i}", "󰍹", "workspace"
     return key, "󰌌", "shortcut"
 
-def load_data():
-    os.makedirs(STATE_DIR, exist_ok=True)
+def _load_data_unlocked():
     if not os.path.exists(STATS_FILE):
         return {
             "totalActions": 0,
@@ -85,12 +86,30 @@ def load_data():
             "stats": {}
         }
 
-def save_data(data):
+def _save_data_unlocked(data):
     os.makedirs(STATE_DIR, exist_ok=True)
     tmp_file = f"{STATS_FILE}.tmp.{os.getpid()}"
     with open(tmp_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     os.replace(tmp_file, STATS_FILE)
+
+def load_data():
+    os.makedirs(STATE_DIR, exist_ok=True)
+    with open(LOCK_FILE, "a+") as lf:
+        try:
+            fcntl.flock(lf, fcntl.LOCK_SH)
+            return _load_data_unlocked()
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
+
+def save_data(data):
+    os.makedirs(STATE_DIR, exist_ok=True)
+    with open(LOCK_FILE, "a+") as lf:
+        try:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            _save_data_unlocked(data)
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
 
 def update_streak(data):
     today_str = str(date.today())
@@ -111,52 +130,58 @@ def update_streak(data):
         data["streak"] = streak
 
 def record_action(key, desc="", icon="", category=""):
-    data = load_data()
-    now_ms = int(time.time() * 1000)
+    os.makedirs(STATE_DIR, exist_ok=True)
+    with open(LOCK_FILE, "a+") as lf:
+        try:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            data = _load_data_unlocked()
+            now_ms = int(time.time() * 1000)
 
-    # Fill metadata if missing
-    syn_desc, syn_icon, syn_cat = synthesize_meta(key)
-    desc = desc or syn_desc
-    icon = icon or syn_icon
-    category = category or syn_cat
+            # Fill metadata if missing
+            syn_desc, syn_icon, syn_cat = synthesize_meta(key)
+            desc = desc or syn_desc
+            icon = icon or syn_icon
+            category = category or syn_cat
 
-    # 1. Update streak
-    update_streak(data)
+            # 1. Update streak
+            update_streak(data)
 
-    # 2. Update totals
-    data["totalActions"] = data.get("totalActions", 0) + 1
+            # 2. Update totals
+            data["totalActions"] = data.get("totalActions", 0) + 1
 
-    # 3. Update stats map
-    stats = data.setdefault("stats", {})
-    item = stats.setdefault(key, {
-        "count": 0,
-        "lastUsed": now_ms,
-        "desc": desc,
-        "icon": icon,
-        "category": category
-    })
-    item["count"] = item.get("count", 0) + 1
-    item["lastUsed"] = now_ms
-    item["desc"] = desc
-    item["icon"] = icon
-    item["category"] = category
+            # 3. Update stats map
+            stats = data.setdefault("stats", {})
+            item = stats.setdefault(key, {
+                "count": 0,
+                "lastUsed": now_ms,
+                "desc": desc,
+                "icon": icon,
+                "category": category
+            })
+            item["count"] = item.get("count", 0) + 1
+            item["lastUsed"] = now_ms
+            item["desc"] = desc
+            item["icon"] = icon
+            item["category"] = category
 
-    # 4. Append to chronological history stream (newest first)
-    history = data.setdefault("history", [])
-    history_entry = {
-        "id": f"h_{now_ms}_{len(history)}",
-        "key": key,
-        "desc": desc,
-        "icon": icon,
-        "category": category,
-        "timestamp": now_ms
-    }
-    history.insert(0, history_entry)
-    if len(history) > MAX_HISTORY:
-        data["history"] = history[:MAX_HISTORY]
+            # 4. Append to chronological history stream (newest first)
+            history = data.setdefault("history", [])
+            history_entry = {
+                "id": f"h_{now_ms}_{len(history)}",
+                "key": key,
+                "desc": desc,
+                "icon": icon,
+                "category": category,
+                "timestamp": now_ms
+            }
+            history.insert(0, history_entry)
+            if len(history) > MAX_HISTORY:
+                data["history"] = history[:MAX_HISTORY]
 
-    save_data(data)
-    return data
+            _save_data_unlocked(data)
+            return data
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
 
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "get"
@@ -175,10 +200,16 @@ def main():
         data = record_action(key, desc, icon, category)
         print(json.dumps(data, ensure_ascii=False))
     elif cmd == "clear-history":
-        data = load_data()
-        data["history"] = []
-        save_data(data)
-        print(json.dumps(data, ensure_ascii=False))
+        os.makedirs(STATE_DIR, exist_ok=True)
+        with open(LOCK_FILE, "a+") as lf:
+            try:
+                fcntl.flock(lf, fcntl.LOCK_EX)
+                data = _load_data_unlocked()
+                data["history"] = []
+                _save_data_unlocked(data)
+                print(json.dumps(data, ensure_ascii=False))
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
     elif cmd == "reset":
         data = {
             "totalActions": 0,

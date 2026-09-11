@@ -1,0 +1,29 @@
+name: Validate Plugin
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate manifest.json
+        run: |
+          jq empty manifest.json
+          jq -e '.schemaVersion == 1' manifest.json
+          jq -e '.id != null' manifest.json
+          jq -e '.kinds | length > 0' manifest.json
+
+      - name: Run Model & Catalog Unit Tests
+        run: node --test tests/model.test.js

@@ -4,6 +4,7 @@ Hyprland socket2 real-time event listener for Navigation Guide (nav-guide).
 1. Detects native keyboard window actions and logs them to the stats manager.
 2. Continuously updates ~/.local/state/omarchy/nav-guide-windows.json with live active window
    and all open clients so Quickshell's FileView has instantaneous 0ms access to real open apps.
+3. Updates ~/.local/state/omarchy/nav-guide-keybindings.json on startup and config reload.
 """
 import sys
 import os
@@ -12,6 +13,7 @@ import time
 import json
 import fcntl
 import subprocess
+import signal
 
 # Add plugin bin directory to sys.path to import stats_manager logic
 BIN_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -76,12 +78,12 @@ def update_window_state(force=False):
         }
 
         os.makedirs(os.path.dirname(WINDOWS_FILE), exist_ok=True)
-        tmp_file = WINDOWS_FILE + ".tmp"
+        tmp_file = f"{WINDOWS_FILE}.tmp.{os.getpid()}"
         with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(data, f)
         os.replace(tmp_file, WINDOWS_FILE)
     except Exception as e:
-        pass
+        print(f"nav-guide: update_window_state error: {e}", file=sys.stderr)
 
 def get_icon_and_category(desc, key, arg):
     d = (desc or "").lower()
@@ -166,15 +168,27 @@ def update_keybindings_state():
             })
 
         os.makedirs(os.path.dirname(KEYBINDINGS_FILE), exist_ok=True)
-        tmp = KEYBINDINGS_FILE + ".tmp"
+        tmp = f"{KEYBINDINGS_FILE}.tmp.{os.getpid()}"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(catalog, f, indent=2)
         os.replace(tmp, KEYBINDINGS_FILE)
     except Exception as e:
-        pass
+        print(f"nav-guide: update_keybindings_state error: {e}", file=sys.stderr)
 
 def main():
     lock_fd = acquire_lock()
+
+    def handle_signal(sig, frame):
+        try:
+            if os.path.exists(LOCK_FILE):
+                os.remove(LOCK_FILE)
+        except Exception:
+            pass
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
     last_event_time = {}
 
     def should_record(event_key, cooldown=0.35):
@@ -195,6 +209,8 @@ def main():
             time.sleep(2)
             continue
 
+        s = None
+        f = None
         try:
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             s.connect(sock_path)
@@ -261,7 +277,19 @@ def main():
                     update_window_state(force=True)
 
         except Exception as e:
+            print(f"nav-guide: socket loop error: {e}", file=sys.stderr)
             time.sleep(2)
+        finally:
+            if f:
+                try:
+                    f.close()
+                except Exception:
+                    pass
+            if s:
+                try:
+                    s.close()
+                except Exception:
+                    pass
 
 if __name__ == "__main__":
     main()

@@ -20,11 +20,11 @@ Rectangle {
 
   property color foreground: Color.popups.text
   property color accent: Color.accent
-  property bool hovered: mouseArea.containsMouse
+  readonly property bool hovered: mouseArea.containsMouse
 
   signal triggered(string actionCmd)
 
-  implicitWidth: parent ? parent.width : Style.space(380)
+  implicitWidth: Style.space(380)
   implicitHeight: Math.max(Style.space(38), row.implicitHeight + Style.space(12))
   radius: Style.space(6)
 

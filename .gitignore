@@ -10,3 +10,12 @@
 build/
 *.pyc
 __pycache__/
+
+# State, locks, and logs
+*.lock
+*.tmp
+*.tmp.*
+*.log
+*stats*.json
+*windows*.json
+*keybindings*.json

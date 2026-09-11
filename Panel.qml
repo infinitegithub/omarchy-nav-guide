@@ -121,13 +121,10 @@ Panel {
     : TipCatalog.allShortcuts
 
   // Refresh windows and stats synchronously
-  function refreshAll(forceSubprocess) {
+  function refreshAll() {
     windowsFile.reload()
     statsFile.reload()
     keybindingsFile.reload()
-    if (forceSubprocess || (!root.rawClients || root.rawClients.length === 0)) {
-      Quickshell.execDetached([root.pluginDir + "/bin/window-state"])
-    }
   }
 
   // Background Hyprland socket listener daemon (maintains nav-guide-windows.json & stats)
@@ -179,19 +176,21 @@ Panel {
     refreshAll()
   }
 
+  function onPanelOpened() {
+    root.recordAction("SUPER + K", "Navigation Guide HUD", "󰞋", "tools")
+    root.refreshAll()
+    searchField.text = ""
+    Qt.callLater(function() {
+      searchField.forceActiveFocus()
+    })
+  }
+
   // Hook both controller and opened property for popup open events
   Connections {
     target: root.controller
     function onOpenChanged() {
-      if (root.controller.open) {
-        root.recordAction("SUPER + K", "Navigation Guide HUD", "󰞋", "tools")
-        root.refreshAll()
-        searchField.text = ""
-        root.searchQuery = ""
-        root.selectedIndex = 0
-        Qt.callLater(function() {
-          searchField.forceActiveFocus()
-        })
+      if (root.controller && root.controller.open) {
+        root.onPanelOpened()
       }
     }
   }
@@ -200,14 +199,7 @@ Panel {
   onToplevelChanged: Qt.callLater(refreshAll)
   onOpenedChanged: {
     if (opened) {
-      root.recordAction("SUPER + K", "Navigation Guide HUD", "󰞋", "tools")
-      refreshAll()
-      searchField.text = ""
-      root.searchQuery = ""
-      root.selectedIndex = 0
-      Qt.callLater(function() {
-        searchField.forceActiveFocus()
-      })
+      root.onPanelOpened()
     }
   }
 
@@ -229,6 +221,11 @@ Panel {
     root.rawActive,
     root.rawClients
   )
+
+  // Cached context items array for 0-allocation keyboard navigation
+  readonly property var contextItems: (root.smartNav && root.smartNav.openTasks)
+    ? root.smartNav.openTasks.concat(root.smartNav.currentWindow).concat(root.smartNav.essentialTools)
+    : []
 
   // Mastery and Leaderboard models
   readonly property var navigatorRank: NavModel.getNavigatorRank(
@@ -286,7 +283,7 @@ Panel {
       return root.searchResults
     }
     if (root.currentTab === "context") {
-      return root.smartNav.openTasks.concat(root.smartNav.currentWindow).concat(root.smartNav.essentialTools)
+      return root.contextItems
     }
     if (root.currentTab === "all") {
       return root.effectiveCatalog

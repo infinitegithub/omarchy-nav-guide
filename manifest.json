@@ -5,6 +5,8 @@
   "version": "1.0.0",
   "author": "Es Sadik Sanhaji",
   "license": "MIT",
+  "homepage": "https://github.com/infinitegithub/omarchy-nav-guide",
+  "repository": "https://github.com/infinitegithub/omarchy-nav-guide",
   "description": "An enhanced Super+K window that teaches you Omarchy keybindings by suggesting shortcuts based on what you have open.",
   "kinds": [
     "bar-widget"

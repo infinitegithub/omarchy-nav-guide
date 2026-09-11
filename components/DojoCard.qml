@@ -18,7 +18,7 @@ Rectangle {
 
   signal executed(string key, string desc, string icon, string category, string cmd)
 
-  implicitWidth: parent ? parent.width : Style.space(380)
+  implicitWidth: Style.space(380)
   implicitHeight: mainCol.implicitHeight + Style.space(20)
   radius: Style.space(6)
   color: Util.alpha(accent, 0.08)

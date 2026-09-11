@@ -12,7 +12,7 @@ Rectangle {
   property color foreground: Color.popups.text
   property color accent: Color.accent
 
-  implicitWidth: parent ? parent.width : Style.space(380)
+  implicitWidth: Style.space(380)
   implicitHeight: column.implicitHeight + Style.space(18)
   radius: Style.space(6)
   color: Util.alpha(accent, 0.08)
