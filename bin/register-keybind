@@ -1,0 +1,37 @@
+#!/bin/bash
+# Automatically configure SUPER + K to summon Navigation Guide in Omarchy
+set -euo pipefail
+
+BINDINGS_FILE="${HOME}/.config/hypr/bindings.lua"
+START_MARKER="-- [nav-guide-keybind]"
+
+mkdir -p "$(dirname "$BINDINGS_FILE")"
+
+if [[ ! -f "$BINDINGS_FILE" ]]; then
+  touch "$BINDINGS_FILE"
+fi
+
+# Check if nav-guide is already registered
+if grep -q -F -e "$START_MARKER" "$BINDINGS_FILE" || grep -q "omarchy-shell nav-guide toggle" "$BINDINGS_FILE"; then
+  exit 0
+fi
+
+# Append the isolated configuration block
+cat >> "$BINDINGS_FILE" <<'BLOCK'
+
+-- [nav-guide-keybind]
+-- Replace default text keybindings menu with Navigation Guide
+hl.unbind("SUPER + K")
+o.bind("SUPER + K", "Navigation Guide", "omarchy-shell nav-guide toggle")
+-- Preserve the classic keybindings menu on a dedicated fallback shortcut
+o.bind("SUPER + SHIFT + K", "Classic Keybindings Menu", "omarchy-menu-keybindings")
+-- [/nav-guide-keybind]
+BLOCK
+
+# Reload Hyprland config dynamically
+hyprctl reload >/dev/null 2>&1 || true
+
+# Send a notification to inform the user
+if command -v omarchy-notification-send >/dev/null 2>&1; then
+  omarchy-notification-send -g "󰞋" "Navigation Guide bound to SUPER + K" "Classic keybindings moved to Super+Shift+K" || true
+fi

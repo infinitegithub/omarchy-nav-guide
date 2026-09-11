@@ -74,13 +74,14 @@ omarchy bar move nav-guide --section right
 omarchy bar move nav-guide --section left
 ```
 
-### Optional Keybinding Summon
+### Keybinding Summon (`SUPER + K`)
 
-To open the Navigation Guide directly from your keyboard (e.g. `SUPER + N`), add this to `~/.config/hypr/bindings.lua`:
+When installed and enabled, Navigation Guide **automatically registers itself to `SUPER + K`**, replacing the default static keybindings pop-up with this interactive HUD.
 
-```lua
-o.bind("SUPER + N", "Navigation Guide", "omarchy-shell nav-guide toggle")
-```
+- **`SUPER + K`**: Toggles the Navigation Guide HUD.
+- **`SUPER + SHIFT + K`**: Retained as a fallback shortcut to open Omarchy's classic text-based keybindings menu (`omarchy-menu-keybindings`).
+
+*(Note: The setup is performed once on initial load and written into an isolated block in `~/.config/hypr/bindings.lua`. If you ever uninstall the plugin, you can run `./bin/unregister-keybind` to restore defaults).*
 
 ---
 
@@ -93,12 +94,16 @@ nav-guide/
 ├── NavigationModel.js         # Spatial calculation and context rule engine
 ├── TipCatalog.js              # Shortcut catalog and educational tips
 ├── bin/
-│   └── window-state           # Real-time activewindow and clients query script
+│   ├── window-state           # Real-time activewindow and clients query script
+│   ├── stats-manager          # Usage and shortcut ranking persistence
+│   ├── register-keybind       # Automatic SUPER + K installer for bindings.lua
+│   └── unregister-keybind     # Clean unbinder for bindings.lua
 ├── components/
 │   ├── ContextHeader.qml      # Active window and workspace status header
 │   ├── KeyBadge.qml           # Keyboard key cap badges
 │   ├── SuggestionCard.qml     # Interactive action card component
-│   └── TipBanner.qml          # Rotating tips carousel
+│   ├── TipBanner.qml          # Rotating tips carousel
+│   └── MasteryCard.qml        # Rank and mastery level card
 ├── LICENSE                    # MIT License
 └── README.md                  # Documentation and guide
 ```

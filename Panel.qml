@@ -102,6 +102,15 @@ Panel {
     return item ? (Number(item.count) || 0) : 0
   }
 
+  Process {
+    id: keybindInstaller
+    command: [root.pluginDir + "/bin/register-keybind"]
+  }
+
+  Component.onCompleted: {
+    keybindInstaller.running = true
+  }
+
   // Update whenever Wayland toplevel changes or panel opens
   onToplevelChanged: Qt.callLater(refreshAll)
   onOpenedChanged: {

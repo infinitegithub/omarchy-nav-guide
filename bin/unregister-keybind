@@ -1,0 +1,15 @@
+#!/bin/bash
+# Remove Navigation Guide keybinding from ~/.config/hypr/bindings.lua
+set -euo pipefail
+
+BINDINGS_FILE="${HOME}/.config/hypr/bindings.lua"
+START_MARKER="-- [nav-guide-keybind]"
+
+if [[ -f "$BINDINGS_FILE" ]] && grep -q -F -e "$START_MARKER" "$BINDINGS_FILE"; then
+  # Remove lines from START_MARKER to [/nav-guide-keybind]
+  sed -i '/-- \[nav-guide-keybind\]/,/-- \[\/nav-guide-keybind\]/d' "$BINDINGS_FILE"
+  hyprctl reload >/dev/null 2>&1 || true
+  if command -v omarchy-notification-send >/dev/null 2>&1; then
+    omarchy-notification-send -g "󰞋" "Navigation Guide keybindings restored to defaults" || true
+  fi
+fi

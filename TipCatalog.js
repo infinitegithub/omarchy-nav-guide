@@ -144,7 +144,8 @@ var allShortcuts = [
   { key: "CTRL + ALT + SHIFT + TAB", desc: "Focus Previous Monitor", category: "monitors", icon: "󰍹", action: "hyprctl dispatch 'hl.dsp.focus({ monitor = \"-1\" })'" },
 
   // Tools & System
-  { key: "SUPER + K", desc: "Keybindings Search Explorer", category: "tools", icon: "󰌌", action: "omarchy-menu-keybindings" },
+  { key: "SUPER + K", desc: "Navigation Guide HUD", category: "tools", icon: "󰞋", action: "omarchy-shell nav-guide toggle" },
+  { key: "SUPER + SHIFT + K", desc: "Classic Keybindings Menu", category: "tools", icon: "󰌌", action: "omarchy-menu-keybindings" },
   { key: "SUPER + CTRL + V", desc: "Clipboard History Manager", category: "tools", icon: "󰅌", action: "omarchy-shell shell summon omarchy.clipboard '{}'" },
   { key: "SUPER + CTRL + E", desc: "Emoji Picker", category: "tools", icon: "󰞅", action: "omarchy-shell shell summon omarchy.emojis '{}'" },
   { key: "SUPER + CTRL + L", desc: "Lock Screen", category: "tools", icon: "󰌾", action: "omarchy-lock" },
