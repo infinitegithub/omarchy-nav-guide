@@ -11,6 +11,12 @@ if [[ ! -f "$BINDINGS_FILE" ]]; then
   touch "$BINDINGS_FILE"
 fi
 
+# Ensure background Hyprland socket listener is running
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! pgrep -f "nav-guide/bin/hypr-listener" >/dev/null 2>&1; then
+  setsid python3 "$DIR/hypr-listener" </dev/null >/dev/null 2>&1 &
+fi
+
 # Check if nav-guide is already registered
 if grep -q -F -e "$START_MARKER" "$BINDINGS_FILE" || grep -q "omarchy-shell nav-guide toggle" "$BINDINGS_FILE"; then
   exit 0
@@ -30,6 +36,12 @@ BLOCK
 
 # Reload Hyprland config dynamically
 hyprctl reload >/dev/null 2>&1 || true
+
+# Ensure background Hyprland socket listener is running
+if ! pgrep -f "bin/hypr-listener" >/dev/null 2>&1; then
+  DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  nohup "$DIR/hypr-listener" >/dev/null 2>&1 &
+fi
 
 # Send a notification to inform the user
 if command -v omarchy-notification-send >/dev/null 2>&1; then

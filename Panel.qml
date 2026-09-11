@@ -76,31 +76,39 @@ Panel {
     }
   }
 
+  // Background Hyprland socket listener for live physical keypress logging
   Process {
-    id: recordProc
-    property string pendingKey: ""
-    property string pendingDesc: ""
-    property string pendingIcon: ""
-    property string pendingCategory: ""
-    command: [root.pluginDir + "/bin/stats-manager", "record", pendingKey, pendingDesc, pendingIcon, pendingCategory]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: function(text) {
-        try {
-          var res = JSON.parse(text)
-          root.rawStats = res || root.rawStats
-        } catch (e) {}
+    id: hyprListenerProc
+    command: [root.pluginDir + "/bin/hypr-listener"]
+    running: true
+    stdout: SplitParser {
+      onRead: function(line) {
+        root.refreshAll()
       }
+    }
+  }
+
+  Timer {
+    id: statsRefreshTimer
+    interval: 80
+    repeat: false
+    onTriggered: {
+      if (!statsProc.running) statsProc.running = true
     }
   }
 
   function recordAction(key, desc, icon, category) {
     if (!key) return
-    recordProc.pendingKey = key
-    recordProc.pendingDesc = desc || ""
-    recordProc.pendingIcon = icon || ""
-    recordProc.pendingCategory = category || ""
-    recordProc.running = true
+    Quickshell.execDetached([
+      "bash", "-c",
+      'exec "$0" record "$1" "$2" "$3" "$4"',
+      root.pluginDir + "/bin/stats-manager",
+      key,
+      desc || "",
+      icon || "",
+      category || ""
+    ])
+    statsRefreshTimer.restart()
   }
 
   function getCountForKey(key) {
@@ -119,10 +127,25 @@ Panel {
     refreshAll()
   }
 
+  // Hook both controller and opened property for popup open events
+  Connections {
+    target: root.controller
+    function onOpenChanged() {
+      if (root.controller.open) {
+        root.recordAction("SUPER + K", "Navigation Guide HUD", "󰞋", "tools")
+        root.refreshAll()
+        searchField.text = ""
+        root.searchQuery = ""
+        root.selectedIndex = 0
+      }
+    }
+  }
+
   // Update whenever Wayland toplevel changes or panel opens
   onToplevelChanged: Qt.callLater(refreshAll)
   onOpenedChanged: {
     if (opened) {
+      root.recordAction("SUPER + K", "Navigation Guide HUD", "󰞋", "tools")
       refreshAll()
       searchField.text = ""
       root.searchQuery = ""
@@ -230,8 +253,8 @@ Panel {
     open: root.opened
     focusTarget: keyCatcher
 
-    contentWidth: panel.fittedContentWidth(Style.space(520))
-    contentHeight: panel.fittedContentHeight(Style.space(620), 700)
+    contentWidth: panel.fittedContentWidth(Style.space(540))
+    contentHeight: panel.fittedContentHeight(Style.space(660), 740)
 
     PanelKeyCatcher {
       id: keyCatcher
@@ -240,7 +263,7 @@ Panel {
       onCloseRequested: root.close()
 
       onTabRequested: function(direction) {
-        var tabs = ["context", "all", "history", "dojo"]
+        var tabs = ["context", "dojo", "history", "all"]
         var curIdx = tabs.indexOf(root.currentTab)
         if (curIdx === -1) curIdx = 0
         var nextIdx = (curIdx + direction + tabs.length) % tabs.length
@@ -286,131 +309,128 @@ Panel {
         anchors.fill: parent
         spacing: Style.space(8)
 
-        // Header with title & segmented tab buttons
+        // 1. Title Row with Keyboard Navigation Hints
         RowLayout {
           Layout.fillWidth: true
-          spacing: Style.space(6)
+          spacing: Style.space(8)
 
           Text {
-            text: "󰞋 Navigation"
+            text: "󰞋 Navigation Guide"
             font.family: Style.font.family
             font.pixelSize: Style.font.title
             font.bold: true
             color: Color.popups.text
           }
 
-          // Tab Switcher Pills
-          Row {
-            spacing: Style.space(4)
-            Layout.leftMargin: Style.space(4)
+          Item { Layout.fillWidth: true }
 
-            // 1. Windows Tab
+          Text {
+            text: "Tab to cycle · / to search"
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption - 1
+            color: Util.alpha(Color.popups.text, 0.5)
+          }
+
+          Rectangle {
+            implicitWidth: escBadge.implicitWidth + Style.space(8)
+            implicitHeight: Style.space(18)
+            radius: Style.space(3)
+            color: Util.alpha(Color.popups.text, 0.08)
+            border.color: Util.alpha(Color.popups.text, 0.15)
+            border.width: 1
+
+            Text {
+              id: escBadge
+              anchors.centerIn: parent
+              text: "Esc"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption - 2
+              font.bold: true
+              color: Util.alpha(Color.popups.text, 0.7)
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.close()
+            }
+          }
+        }
+
+        // 2. Hero Rank, XP Progress & Daily Streak Banner (Always Visible)
+        Rectangle {
+          Layout.fillWidth: true
+          implicitHeight: Style.space(38)
+          radius: Style.space(6)
+          color: Util.alpha(Color.accent, 0.08)
+          border.color: Util.alpha(Color.accent, 0.22)
+          border.width: 1
+
+          RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: Style.space(10)
+            anchors.rightMargin: Style.space(10)
+            spacing: Style.space(8)
+
+            Text {
+              text: (root.navigatorRank ? root.navigatorRank.icon : "🌱") + " LVL " + (root.navigatorRank ? root.navigatorRank.level : 1) + ": " + (root.navigatorRank ? root.navigatorRank.title : "Novice")
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              color: Color.popups.text
+            }
+
+            // Progress bar
             Rectangle {
-              implicitWidth: contextTabLabel.implicitWidth + Style.space(10)
-              implicitHeight: Style.space(22)
-              radius: Style.space(4)
-              color: root.currentTab === "context" && root.searchQuery === ""
-                ? Util.alpha(Color.accent, 0.22)
-                : Util.alpha(Color.popups.text, 0.06)
+              Layout.fillWidth: true
+              implicitHeight: Style.space(6)
+              radius: Style.space(3)
+              color: Util.alpha(Color.popups.text, 0.1)
 
-              Text {
-                id: contextTabLabel
-                anchors.centerIn: parent
-                text: "🎯 Windows"
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: root.currentTab === "context"
-                color: root.currentTab === "context" && root.searchQuery === "" ? Color.accent : Color.popups.text
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                  root.currentTab = "context"
-                  searchField.text = ""
-                  root.searchQuery = ""
-                }
+              Rectangle {
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: Math.max(Style.space(6), parent.width * (root.navigatorRank ? root.navigatorRank.percent : 0))
+                radius: Style.space(3)
+                color: Color.accent
+                Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
               }
             }
 
-            // 2. All Keybinds Tab
-            Rectangle {
-              implicitWidth: allTabLabel.implicitWidth + Style.space(10)
-              implicitHeight: Style.space(22)
-              radius: Style.space(4)
-              color: root.currentTab === "all" && root.searchQuery === ""
-                ? Util.alpha(Color.accent, 0.22)
-                : Util.alpha(Color.popups.text, 0.06)
-
-              Text {
-                id: allTabLabel
-                anchors.centerIn: parent
-                text: "📋 All Keys"
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: root.currentTab === "all"
-                color: root.currentTab === "all" && root.searchQuery === "" ? Color.accent : Color.popups.text
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                  root.currentTab = "all"
-                  searchField.text = ""
-                  root.searchQuery = ""
-                }
-              }
+            Text {
+              text: (root.navigatorRank ? root.navigatorRank.current : 0) + " / " + (root.navigatorRank ? root.navigatorRank.max : 25) + " XP"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption - 1
+              font.bold: true
+              color: Color.accent
             }
 
-            // 3. History & Rank Tab
-            Rectangle {
-              implicitWidth: histTabLabel.implicitWidth + Style.space(10)
-              implicitHeight: Style.space(22)
-              radius: Style.space(4)
-              color: root.currentTab === "history" && root.searchQuery === ""
-                ? Util.alpha(Color.accent, 0.22)
-                : Util.alpha(Color.popups.text, 0.06)
-
-              Text {
-                id: histTabLabel
-                anchors.centerIn: parent
-                text: "📜 History & Rank"
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: root.currentTab === "history"
-                color: root.currentTab === "history" && root.searchQuery === "" ? Color.accent : Color.popups.text
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                  root.currentTab = "history"
-                  searchField.text = ""
-                  root.searchQuery = ""
-                }
-              }
+            Text {
+              text: "🔥 " + (root.navigatorRank && root.navigatorRank.streak ? root.navigatorRank.streak : (root.rawStats ? root.rawStats.streak : 1)) + "d"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption - 1
+              font.bold: true
+              color: Color.urgent
             }
 
-            // 4. Dojo Practice Tab
+            // Dojo Quick Jump Button
             Rectangle {
-              implicitWidth: dojoTabLabel.implicitWidth + Style.space(10)
+              implicitWidth: dojoHeroBtn.implicitWidth + Style.space(10)
               implicitHeight: Style.space(22)
               radius: Style.space(4)
-              color: root.currentTab === "dojo" && root.searchQuery === ""
-                ? Util.alpha(Color.accent, 0.22)
-                : Util.alpha(Color.popups.text, 0.06)
+              color: root.currentTab === "dojo" ? Util.alpha(Color.accent, 0.3) : Util.alpha(Color.accent, 0.18)
+              border.color: Util.alpha(Color.accent, 0.45)
+              border.width: 1
 
               Text {
-                id: dojoTabLabel
+                id: dojoHeroBtn
                 anchors.centerIn: parent
-                text: "🥋 Dojo"
+                text: "🥋 Dojo ❯"
                 font.family: Style.font.family
-                font.pixelSize: Style.font.caption
-                font.bold: root.currentTab === "dojo"
-                color: root.currentTab === "dojo" && root.searchQuery === "" ? Color.accent : Color.popups.text
+                font.pixelSize: Style.font.caption - 1
+                font.bold: true
+                color: Color.accent
               }
 
               MouseArea {
@@ -424,15 +444,143 @@ Panel {
               }
             }
           }
+        }
 
-          Item { Layout.fillWidth: true }
+        // 3. Full-Width Segmented Tab Navigation Bar
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(6)
 
-          // Keyboard hint
-          Text {
-            text: "Press / to search"
-            font.family: Style.font.family
-            font.pixelSize: Style.font.caption - 1
-            color: Util.alpha(Color.popups.text, 0.5)
+          // 1. Windows Tab
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(28)
+            radius: Style.space(4)
+            color: root.currentTab === "context" && root.searchQuery === ""
+              ? Util.alpha(Color.accent, 0.22)
+              : (tab1Mouse.containsMouse ? Util.alpha(Color.popups.text, 0.09) : Util.alpha(Color.popups.text, 0.05))
+            border.color: root.currentTab === "context" && root.searchQuery === "" ? Util.alpha(Color.accent, 0.5) : "transparent"
+            border.width: 1
+
+            Text {
+              anchors.centerIn: parent
+              text: "🎯 Windows"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: root.currentTab === "context"
+              color: root.currentTab === "context" && root.searchQuery === "" ? Color.accent : Color.popups.text
+            }
+
+            MouseArea {
+              id: tab1Mouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.currentTab = "context"
+                searchField.text = ""
+                root.searchQuery = ""
+              }
+            }
+          }
+
+          // 2. Dojo Practice Tab (Prominently placed as tab 2)
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(28)
+            radius: Style.space(4)
+            color: root.currentTab === "dojo" && root.searchQuery === ""
+              ? Util.alpha(Color.accent, 0.22)
+              : (tab2Mouse.containsMouse ? Util.alpha(Color.popups.text, 0.09) : Util.alpha(Color.popups.text, 0.05))
+            border.color: root.currentTab === "dojo" && root.searchQuery === "" ? Util.alpha(Color.accent, 0.5) : "transparent"
+            border.width: 1
+
+            Text {
+              anchors.centerIn: parent
+              text: "🥋 Practice Dojo"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: root.currentTab === "dojo"
+              color: root.currentTab === "dojo" && root.searchQuery === "" ? Color.accent : Color.popups.text
+            }
+
+            MouseArea {
+              id: tab2Mouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.currentTab = "dojo"
+                searchField.text = ""
+                root.searchQuery = ""
+              }
+            }
+          }
+
+          // 3. History & Rank Tab
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(28)
+            radius: Style.space(4)
+            color: root.currentTab === "history" && root.searchQuery === ""
+              ? Util.alpha(Color.accent, 0.22)
+              : (tab3Mouse.containsMouse ? Util.alpha(Color.popups.text, 0.09) : Util.alpha(Color.popups.text, 0.05))
+            border.color: root.currentTab === "history" && root.searchQuery === "" ? Util.alpha(Color.accent, 0.5) : "transparent"
+            border.width: 1
+
+            Text {
+              anchors.centerIn: parent
+              text: "📜 History & Rank"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: root.currentTab === "history"
+              color: root.currentTab === "history" && root.searchQuery === "" ? Color.accent : Color.popups.text
+            }
+
+            MouseArea {
+              id: tab3Mouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.currentTab = "history"
+                searchField.text = ""
+                root.searchQuery = ""
+              }
+            }
+          }
+
+          // 4. All Keybinds Tab
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Style.space(28)
+            radius: Style.space(4)
+            color: root.currentTab === "all" && root.searchQuery === ""
+              ? Util.alpha(Color.accent, 0.22)
+              : (tab4Mouse.containsMouse ? Util.alpha(Color.popups.text, 0.09) : Util.alpha(Color.popups.text, 0.05))
+            border.color: root.currentTab === "all" && root.searchQuery === "" ? Util.alpha(Color.accent, 0.5) : "transparent"
+            border.width: 1
+
+            Text {
+              anchors.centerIn: parent
+              text: "📋 All Keys"
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: root.currentTab === "all"
+              color: root.currentTab === "all" && root.searchQuery === "" ? Color.accent : Color.popups.text
+            }
+
+            MouseArea {
+              id: tab4Mouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.currentTab = "all"
+                searchField.text = ""
+                root.searchQuery = ""
+              }
+            }
           }
         }
 
@@ -616,6 +764,103 @@ Panel {
                   }
                 }
               }
+
+              Item { width: 1; height: Style.space(2) }
+              PanelSeparator { width: parent.width }
+              Item { width: 1; height: Style.space(2) }
+
+              // Front-Page Dojo Spotlight Card
+              Rectangle {
+                width: parent.width
+                implicitHeight: dojoSpotCol.implicitHeight + Style.space(20)
+                radius: Style.space(6)
+                color: Util.alpha(Color.accent, 0.08)
+                border.color: Util.alpha(Color.accent, 0.25)
+                border.width: 1
+
+                ColumnLayout {
+                  id: dojoSpotCol
+                  anchors.fill: parent
+                  anchors.margins: Style.space(12)
+                  spacing: Style.space(6)
+
+                  RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Style.space(6)
+
+                    Text {
+                      text: "🥋 MUSCLE MEMORY DOJO"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption - 1
+                      font.bold: true
+                      color: Color.accent
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Rectangle {
+                      implicitWidth: spotXp.implicitWidth + Style.space(8)
+                      implicitHeight: Style.space(18)
+                      radius: Style.space(3)
+                      color: Util.alpha(Color.accent, 0.2)
+
+                      Text {
+                        id: spotXp
+                        anchors.centerIn: parent
+                        text: "+25 XP / Drill"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption - 2
+                        font.bold: true
+                        color: Color.accent
+                      }
+                    }
+                  }
+
+                  Text {
+                    text: "Train your muscle memory for window management & tiling! Complete quick interactive drills under pressure, build your combo multiplier, and level up your Navigator Rank."
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption
+                    color: Util.alpha(Color.popups.text, 0.8)
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                  }
+
+                  RowLayout {
+                    Layout.fillWidth: true
+
+                    Item { Layout.fillWidth: true }
+
+                    Rectangle {
+                      implicitWidth: enterDojoLabel.implicitWidth + Style.space(16)
+                      implicitHeight: Style.space(26)
+                      radius: Style.space(4)
+                      color: Util.alpha(Color.accent, 0.22)
+                      border.color: Util.alpha(Color.accent, 0.5)
+                      border.width: 1
+
+                      Text {
+                        id: enterDojoLabel
+                        anchors.centerIn: parent
+                        text: "Enter Shortcut Dojo ❯"
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption
+                        font.bold: true
+                        color: Color.accent
+                      }
+
+                      MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                          root.currentTab = "dojo"
+                          searchField.text = ""
+                          root.searchQuery = ""
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
 
             // -----------------------------------------------------------
@@ -738,6 +983,43 @@ Panel {
               visible: root.searchQuery === "" && root.currentTab === "dojo"
               width: parent.width
               spacing: Style.space(8)
+
+              // Explanatory Intro Card
+              Rectangle {
+                width: parent.width
+                implicitHeight: dojoGuideCol.implicitHeight + Style.space(18)
+                radius: Style.space(6)
+                color: Util.alpha(Color.accent, 0.08)
+                border.color: Util.alpha(Color.accent, 0.22)
+                border.width: 1
+
+                ColumnLayout {
+                  id: dojoGuideCol
+                  anchors.fill: parent
+                  anchors.margins: Style.space(12)
+                  spacing: Style.space(4)
+
+                  RowLayout {
+                    spacing: Style.space(6)
+                    Text {
+                      text: "🥋 What is the Shortcut Dojo?"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption
+                      font.bold: true
+                      color: Color.accent
+                    }
+                  }
+
+                  Text {
+                    text: "The Dojo is your interactive reflex trainer for Hyprland shortcuts. Follow the drill prompt below, then hit the shortcut physically on your keyboard OR click '⚡ Practice Now'. Every drill completed grants +XP to level up your Navigator Rank and builds your streak combo!"
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.caption - 1
+                    color: Util.alpha(Color.popups.text, 0.8)
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                  }
+                }
+              }
 
               DojoCard {
                 width: parent.width

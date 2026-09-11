@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""
+Hyprland socket2 real-time event listener for Navigation Guide (nav-guide).
+Detects native keyboard window actions (workspace changes, fullscreen toggles,
+floating changes, window closures, app launches) and logs them directly to the stats manager.
+"""
+import sys
+import os
+import socket
+import time
+import fcntl
+
+# Add plugin bin directory to sys.path to import stats_manager logic
+BIN_DIR = os.path.dirname(os.path.abspath(__file__))
+if BIN_DIR not in sys.path:
+    sys.path.insert(0, BIN_DIR)
+
+from stats_manager import record_action
+
+LOCK_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-listener.lock")
+
+def acquire_lock():
+    os.makedirs(os.path.dirname(LOCK_FILE), exist_ok=True)
+    f = open(LOCK_FILE, "w")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        f.write(str(os.getpid()))
+        f.flush()
+        return f
+    except IOError:
+        # Another listener instance is already running
+        sys.exit(0)
+
+def get_socket_path():
+    sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
+    uid = os.getuid()
+    if sig:
+        candidate = f"/run/user/{uid}/hypr/{sig}/.socket2.sock"
+        if os.path.exists(candidate):
+            return candidate
+    # Fallback search
+    base = f"/run/user/{uid}/hypr"
+    if os.path.exists(base):
+        try:
+            for entry in os.listdir(base):
+                cand = os.path.join(base, entry, ".socket2.sock")
+                if os.path.exists(cand):
+                    return cand
+        except Exception:
+            pass
+    return None
+
+def main():
+    lock_fd = acquire_lock()
+    last_event_time = {}
+
+    def should_record(event_key, cooldown=0.35):
+        now = time.time()
+        last = last_event_time.get(event_key, 0)
+        if now - last < cooldown:
+            return False
+        last_event_time[event_key] = now
+        return True
+
+    while True:
+        sock_path = get_socket_path()
+        if not sock_path:
+            time.sleep(2)
+            continue
+
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.connect(sock_path)
+            f = s.makefile("r", encoding="utf-8", errors="ignore")
+            print(f"nav-guide: connected to Hyprland socket at {sock_path}", flush=True)
+
+            for line in f:
+                if not line:
+                    break
+                line = line.strip()
+                if not line or ">>" not in line:
+                    continue
+
+                event, data = line.split(">>", 1)
+
+                if event == "workspace":
+                    ws = data.split(",")[0].strip()
+                    if ws.isdigit() and should_record(f"ws_{ws}", cooldown=0.3):
+                        record_action(f"SUPER + {ws}", f"Switch to Workspace {ws}", "󰍹", "workspace")
+                        print(f"recorded: SUPER + {ws}", flush=True)
+
+                elif event == "fullscreen":
+                    state = data.strip()
+                    if should_record("fullscreen", cooldown=0.4):
+                        record_action("SUPER + F", "Full Screen", "󰊓", "window")
+                        print("recorded: SUPER + F", flush=True)
+
+                elif event == "changefloatingmode":
+                    if should_record("float", cooldown=0.4):
+                        record_action("SUPER + T", "Toggle Floating Mode", "󰉈", "window")
+                        print("recorded: SUPER + T", flush=True)
+
+                elif event == "closewindow":
+                    if should_record("close", cooldown=0.3):
+                        record_action("SUPER + W", "Close Window", "󰅖", "window")
+                        print("recorded: SUPER + W", flush=True)
+
+                elif event == "openwindow":
+                    # Format: windowaddress,workspacename,windowclass,windowtitle
+                    parts = data.split(",", 3)
+                    if len(parts) >= 3 and should_record("openwindow", cooldown=0.5):
+                        win_class = parts[2].lower()
+                        if any(t in win_class for t in ["kitty", "alacritty", "foot", "ghostty", "terminal"]):
+                            record_action("SUPER + RETURN", "Launch Terminal", "󰞷", "apps")
+                            print("recorded: SUPER + RETURN", flush=True)
+                        elif any(b in win_class for b in ["firefox", "chromium", "chrome", "brave", "zen"]):
+                            record_action("SUPER + B", "Launch Browser", "󰖟", "web")
+                            print("recorded: SUPER + B", flush=True)
+                        elif any(m in win_class for m in ["nautilus", "thunar", "filemanager"]):
+                            record_action("SUPER + E", "File Manager", "󰉋", "files")
+                            print("recorded: SUPER + E", flush=True)
+                        elif any(e in win_class for e in ["code", "codium", "cursor", "nvim"]):
+                            record_action("SUPER + SHIFT + N", "Launch Editor", "󰅩", "apps")
+                            print("recorded: SUPER + SHIFT + N", flush=True)
+
+                elif event == "movewindow":
+                    if should_record("movewindow", cooldown=0.4):
+                        record_action("SUPER + SHIFT + Move", "Move / Swap Window", "󰤻", "window")
+                        print("recorded: SUPER + SHIFT + Move", flush=True)
+
+        except Exception as e:
+            time.sleep(2)
+
+if __name__ == "__main__":
+    main()
