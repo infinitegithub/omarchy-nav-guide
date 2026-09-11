@@ -41,7 +41,7 @@ Panel {
   // Refresh active window, all clients, and stats
   function refreshAll() {
     if (!stateProc.running) stateProc.running = true
-    if (!statsProc.running) statsProc.running = true
+    statsFile.reload()
   }
 
   Process {
@@ -62,18 +62,29 @@ Panel {
     }
   }
 
-  Process {
-    id: statsProc
-    command: [root.pluginDir + "/bin/stats-manager", "get"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: function(text) {
-        try {
-          var res = JSON.parse(text)
-          root.rawStats = res || { totalActions: 0, streak: 1, history: [], stats: {} }
-        } catch (e) {}
+  property string statsPath: Quickshell.env("HOME") + "/.local/state/omarchy/nav-guide-stats.json"
+
+  function loadStats(rawText) {
+    if (!rawText) return
+    try {
+      var data = JSON.parse(rawText)
+      if (data && typeof data === "object") {
+        root.rawStats = data
       }
+    } catch (e) {
+      console.warn("nav-guide: failed to parse stats JSON:", e)
     }
+  }
+
+  FileView {
+    id: statsFile
+    path: root.statsPath
+    watchChanges: true
+    atomicWrites: true
+    printErrors: false
+    onLoaded: root.loadStats(text())
+    onLoadFailed: root.rawStats = { totalActions: 0, streak: 1, history: [], stats: {} }
+    onFileChanged: reload()
   }
 
   // Background Hyprland socket listener for live physical keypress logging
@@ -92,9 +103,7 @@ Panel {
     id: statsRefreshTimer
     interval: 80
     repeat: false
-    onTriggered: {
-      if (!statsProc.running) statsProc.running = true
-    }
+    onTriggered: statsFile.reload()
   }
 
   function recordAction(key, desc, icon, category) {
