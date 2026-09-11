@@ -183,7 +183,7 @@ var allShortcuts = [
   // -------------------------------------------------------------
   // System Tools & Menus
   // -------------------------------------------------------------
-  { key: "SUPER + K", desc: "SuperK Pilot HUD", category: "tools", icon: "󰞋", action: "omarchy-shell nav-guide toggle" },
+  { key: "SUPER + K", desc: "Super+K Alternative", category: "tools", icon: "󰞋", action: "omarchy-shell nav-guide toggle" },
   { key: "SUPER + SHIFT + K", desc: "Classic Keybindings Menu", category: "tools", icon: "󰌌", action: "omarchy-menu-keybindings" },
   { key: "SUPER + SPACE", desc: "Open Omarchy Menu (App Search)", category: "tools", icon: "󰍜", action: "omarchy-menu toggle" },
   { key: "SUPER + ALT + SPACE", desc: "Applications Submenu", category: "tools", icon: "󰍜", action: "omarchy-menu toggle apps" },

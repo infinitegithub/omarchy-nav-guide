@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "nav-guide",
-  "name": "SuperK Pilot",
+  "name": "Super+K Alternative",
   "version": "1.0.0",
   "author": "Es Sadik Sanhaji",
   "license": "MIT",
-  "description": "Real-time Super+K learning co-pilot for Omarchy: teaches you system keybindings with context-aware shortcuts for your open apps, reflex muscle-memory training, and live mastery progression",
+  "description": "An enhanced Super+K window that teaches you Omarchy keybindings by suggesting shortcuts based on what you have open.",
   "kinds": [
     "bar-widget"
   ],
@@ -13,8 +13,8 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "SuperK Pilot",
-    "description": "Real-time Super+K learning co-pilot and context-aware shortcut tutor",
+    "displayName": "Super+K Alternative",
+    "description": "Enhanced Super+K window that suggests shortcuts for your open apps",
     "category": "Utilities",
     "allowMultiple": false,
     "defaultSection": "center"
