@@ -38,30 +38,33 @@ Panel {
   property string searchQuery: ""
   property int selectedIndex: 0
 
-  // Refresh active window, all clients, and stats
-  function refreshAll() {
-    if (!stateProc.running) stateProc.running = true
-    statsFile.reload()
-  }
+  // 1. Live Windows JSON FileView (Zero latency in-memory state)
+  property string windowsPath: Quickshell.env("HOME") + "/.local/state/omarchy/nav-guide-windows.json"
 
-  Process {
-    id: stateProc
-    command: [root.pluginDir + "/bin/window-state"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: function(text) {
-        try {
-          var res = JSON.parse(text)
-          root.rawActive = (res && res.active) ? res.active : {}
-          root.rawClients = (res && Array.isArray(res.clients)) ? res.clients : []
-        } catch (e) {
-          root.rawActive = {}
-          root.rawClients = []
-        }
+  function loadWindows(rawText) {
+    if (!rawText) return
+    try {
+      var data = JSON.parse(rawText)
+      if (data && typeof data === "object") {
+        root.rawActive = (data && data.active) ? data.active : {}
+        root.rawClients = (data && Array.isArray(data.clients)) ? data.clients : []
       }
+    } catch (e) {
+      console.warn("nav-guide: failed to parse windows JSON:", e)
     }
   }
 
+  FileView {
+    id: windowsFile
+    path: root.windowsPath
+    watchChanges: true
+    atomicWrites: true
+    printErrors: false
+    onLoaded: root.loadWindows(text())
+    onFileChanged: reload()
+  }
+
+  // 2. Stats JSON FileView
   property string statsPath: Quickshell.env("HOME") + "/.local/state/omarchy/nav-guide-stats.json"
 
   function loadStats(rawText) {
@@ -87,7 +90,14 @@ Panel {
     onFileChanged: reload()
   }
 
-  // Background Hyprland socket listener for live physical keypress logging
+  // Refresh windows and stats synchronously
+  function refreshAll() {
+    windowsFile.reload()
+    statsFile.reload()
+    Quickshell.execDetached([root.pluginDir + "/bin/window-state"])
+  }
+
+  // Background Hyprland socket listener daemon (maintains nav-guide-windows.json & stats)
   Process {
     id: hyprListenerProc
     command: [root.pluginDir + "/bin/hypr-listener"]
@@ -103,7 +113,7 @@ Panel {
     id: statsRefreshTimer
     interval: 80
     repeat: false
-    onTriggered: statsFile.reload()
+    onTriggered: root.refreshAll()
   }
 
   function recordAction(key, desc, icon, category) {
@@ -169,7 +179,7 @@ Panel {
   }
 
   Timer {
-    interval: 2500
+    interval: 2000
     running: true
     repeat: true
     onTriggered: root.refreshAll()
@@ -181,7 +191,7 @@ Panel {
     root.rawActive.title || (toplevel ? toplevel.title : "")
   )
 
-  // Smart segmented navigation model
+  // Smart segmented navigation model (Real open windows & tabs)
   readonly property var smartNav: NavModel.buildSmartNavigation(
     root.rawActive,
     root.rawClients
@@ -748,7 +758,7 @@ Panel {
                     RowLayout {
                       spacing: Style.space(6)
                       Text {
-                        text: root.activeApp.label
+                        text: "Currently focused: " + root.activeApp.label
                         font.family: Style.font.family
                         font.pixelSize: Style.font.body
                         font.bold: true
@@ -762,7 +772,7 @@ Panel {
                         Text {
                           id: wsBadgeText
                           anchors.centerIn: parent
-                          text: "Active Workspace " + ((root.rawActive && root.rawActive.workspace) ? root.rawActive.workspace.name : "1")
+                          text: "Workspace " + ((root.rawActive && root.rawActive.workspace) ? root.rawActive.workspace.name : "1")
                           font.family: Style.font.family
                           font.pixelSize: Style.font.caption - 2
                           font.bold: true
@@ -790,7 +800,7 @@ Panel {
                 spacing: Style.space(4)
 
                 PanelSectionHeader {
-                  text: "SWITCH TO OPEN WINDOWS (" + root.smartNav.openTasks.length + ") · CLICK OR HIT ACCELERATOR"
+                  text: "SWITCH TO OPEN APPS (" + root.smartNav.openTasks.length + ") · CLICK OR HIT ACCELERATOR"
                 }
 
                 Repeater {

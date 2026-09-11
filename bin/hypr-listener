@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
 Hyprland socket2 real-time event listener for Navigation Guide (nav-guide).
-Detects native keyboard window actions (workspace changes, fullscreen toggles,
-floating changes, window closures, app launches) and logs them directly to the stats manager.
+1. Detects native keyboard window actions and logs them to the stats manager.
+2. Continuously updates ~/.local/state/omarchy/nav-guide-windows.json with live active window
+   and all open clients so Quickshell's FileView has instantaneous 0ms access to real open apps.
 """
 import sys
 import os
 import socket
 import time
+import json
 import fcntl
+import subprocess
 
 # Add plugin bin directory to sys.path to import stats_manager logic
 BIN_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +21,7 @@ if BIN_DIR not in sys.path:
 from stats_manager import record_action
 
 LOCK_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-listener.lock")
+WINDOWS_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-windows.json")
 
 def acquire_lock():
     os.makedirs(os.path.dirname(LOCK_FILE), exist_ok=True)
@@ -38,7 +42,6 @@ def get_socket_path():
         candidate = f"/run/user/{uid}/hypr/{sig}/.socket2.sock"
         if os.path.exists(candidate):
             return candidate
-    # Fallback search
     base = f"/run/user/{uid}/hypr"
     if os.path.exists(base):
         try:
@@ -49,6 +52,35 @@ def get_socket_path():
         except Exception:
             pass
     return None
+
+last_window_update = 0
+
+def update_window_state(force=False):
+    global last_window_update
+    now = time.time()
+    if not force and (now - last_window_update < 0.1):
+        return
+    last_window_update = now
+
+    try:
+        raw_active = subprocess.check_output(["hyprctl", "activewindow", "-j"], timeout=1)
+        raw_clients = subprocess.check_output(["hyprctl", "clients", "-j"], timeout=1)
+        active = json.loads(raw_active.decode("utf-8", "ignore"))
+        clients = json.loads(raw_clients.decode("utf-8", "ignore"))
+
+        data = {
+            "active": active,
+            "clients": clients,
+            "timestamp": int(now * 1000)
+        }
+
+        os.makedirs(os.path.dirname(WINDOWS_FILE), exist_ok=True)
+        tmp_file = WINDOWS_FILE + ".tmp"
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        os.replace(tmp_file, WINDOWS_FILE)
+    except Exception as e:
+        pass
 
 def main():
     lock_fd = acquire_lock()
@@ -62,6 +94,9 @@ def main():
         last_event_time[event_key] = now
         return True
 
+    # Immediate snapshot on startup
+    update_window_state(force=True)
+
     while True:
         sock_path = get_socket_path()
         if not sock_path:
@@ -73,6 +108,9 @@ def main():
             s.connect(sock_path)
             f = s.makefile("r", encoding="utf-8", errors="ignore")
             print(f"nav-guide: connected to Hyprland socket at {sock_path}", flush=True)
+
+            # Refresh window state upon connecting
+            update_window_state(force=True)
 
             for line in f:
                 if not line:
@@ -87,46 +125,44 @@ def main():
                     ws = data.split(",")[0].strip()
                     if ws.isdigit() and should_record(f"ws_{ws}", cooldown=0.3):
                         record_action(f"SUPER + {ws}", f"Switch to Workspace {ws}", "󰍹", "workspace")
-                        print(f"recorded: SUPER + {ws}", flush=True)
+                    update_window_state()
 
                 elif event == "fullscreen":
-                    state = data.strip()
                     if should_record("fullscreen", cooldown=0.4):
                         record_action("SUPER + F", "Full Screen", "󰊓", "window")
-                        print("recorded: SUPER + F", flush=True)
+                    update_window_state()
 
                 elif event == "changefloatingmode":
                     if should_record("float", cooldown=0.4):
                         record_action("SUPER + T", "Toggle Floating Mode", "󰉈", "window")
-                        print("recorded: SUPER + T", flush=True)
+                    update_window_state()
 
                 elif event == "closewindow":
                     if should_record("close", cooldown=0.3):
                         record_action("SUPER + W", "Close Window", "󰅖", "window")
-                        print("recorded: SUPER + W", flush=True)
+                    update_window_state()
 
                 elif event == "openwindow":
-                    # Format: windowaddress,workspacename,windowclass,windowtitle
                     parts = data.split(",", 3)
                     if len(parts) >= 3 and should_record("openwindow", cooldown=0.5):
                         win_class = parts[2].lower()
                         if any(t in win_class for t in ["kitty", "alacritty", "foot", "ghostty", "terminal"]):
                             record_action("SUPER + RETURN", "Launch Terminal", "󰞷", "apps")
-                            print("recorded: SUPER + RETURN", flush=True)
                         elif any(b in win_class for b in ["firefox", "chromium", "chrome", "brave", "zen"]):
                             record_action("SUPER + B", "Launch Browser", "󰖟", "web")
-                            print("recorded: SUPER + B", flush=True)
                         elif any(m in win_class for m in ["nautilus", "thunar", "filemanager"]):
                             record_action("SUPER + E", "File Manager", "󰉋", "files")
-                            print("recorded: SUPER + E", flush=True)
                         elif any(e in win_class for e in ["code", "codium", "cursor", "nvim"]):
                             record_action("SUPER + SHIFT + N", "Launch Editor", "󰅩", "apps")
-                            print("recorded: SUPER + SHIFT + N", flush=True)
+                    update_window_state()
+
+                elif event == "activewindow" or event == "focusedmon":
+                    update_window_state()
 
                 elif event == "movewindow":
                     if should_record("movewindow", cooldown=0.4):
                         record_action("SUPER + SHIFT + Move", "Move / Swap Window", "󰤻", "window")
-                        print("recorded: SUPER + SHIFT + Move", flush=True)
+                    update_window_state()
 
         except Exception as e:
             time.sleep(2)

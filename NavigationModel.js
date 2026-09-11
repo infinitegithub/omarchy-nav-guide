@@ -178,15 +178,15 @@ function truncateTitle(title, fallback) {
 }
 
 function buildSmartNavigation(activeWin, allClients) {
-  var curAddr = activeWin ? activeWin.address : "";
-  var curWsId = (activeWin && activeWin.workspace) ? activeWin.workspace.id : 1;
-  var curAt = activeWin ? activeWin.at : [0, 0];
+  var curAddr = (activeWin && activeWin.address) ? String(activeWin.address) : "";
+  var curWsId = (activeWin && activeWin.workspace) ? activeWin.workspace.id : null;
+  var curAt = (activeWin && activeWin.at) ? activeWin.at : [0, 0];
   var curApp = detectAppInfo(activeWin ? activeWin.class : "", activeWin ? activeWin.title : "");
 
   var clients = Array.isArray(allClients) ? allClients : [];
 
   var sections = {
-    openTasks: [],      // Switch to other open windows and tabs (top priority)
+    openTasks: [],      // Switch to other open windows and apps (top priority)
     currentWindow: [],  // Tiling, floating, split, fullscreen, close active
     essentialTools: []  // Instant system navigation tools
   };
@@ -198,17 +198,17 @@ function buildSmartNavigation(activeWin, allClients) {
     var c = clients[i];
     var info = detectAppInfo(c.class, c.title);
 
-    if (c.address === curAddr) continue;
+    // Don't show current active window in switch list
+    if (curAddr && c.address === curAddr) continue;
 
-    if (c.workspace && c.workspace.id === curWsId) {
+    if (curWsId !== null && c.workspace && c.workspace.id === curWsId) {
       sameWsOthers.push({ client: c, info: info });
     } else if (c.workspace) {
       otherWsOthers.push({ client: c, info: info });
     }
   }
 
-  // 1. SWITCH TO EXISTING OPEN WINDOWS & TABS (TOP PRIORITY)
-  // Same workspace neighbors (spatial Left/Right/Up/Down)
+  // 1. Same workspace neighbors (spatial Left/Right/Up/Down)
   for (var s = 0; s < sameWsOthers.length; s++) {
     var item = sameWsOthers[s];
     var rel = calculateRelativeDirection(curAt, item.client.at);
@@ -236,7 +236,14 @@ function buildSmartNavigation(activeWin, allClients) {
     }
   }
 
+  // 2. Sort other workspace clients: numerical 1..10 first, then scratchpad
   otherWsOthers.sort(function(a, b) {
+    var aWs = a.client.workspace ? String(a.client.workspace.name) : "";
+    var bWs = b.client.workspace ? String(b.client.workspace.name) : "";
+    var aIsSpecial = aWs.indexOf("special:") === 0;
+    var bIsSpecial = bWs.indexOf("special:") === 0;
+    if (aIsSpecial && !bIsSpecial) return 1;
+    if (!aIsSpecial && bIsSpecial) return -1;
     var aId = a.client.workspace ? Number(a.client.workspace.id) || 0 : 0;
     var bId = b.client.workspace ? Number(b.client.workspace.id) || 0 : 0;
     return aId - bId;
@@ -246,16 +253,21 @@ function buildSmartNavigation(activeWin, allClients) {
   for (var o = 0; o < otherWsOthers.length; o++) {
     var other = otherWsOthers[o];
     var ws = String(other.client.workspace ? other.client.workspace.name : "");
-    var oLabel = other.info.label;
-    var oTitle = truncateTitle(other.client.title, oLabel);
+    var isScratchpad = (ws === "special:scratchpad" || ws.indexOf("special:") === 0);
+    var keyStr = isScratchpad ? "SUPER + S" : ("SUPER + " + ws);
+    var badgeStr = isScratchpad ? "Scratchpad" : ("WS " + ws);
+    var titleStr = "Switch to " + other.info.label + (isScratchpad ? " (Scratchpad)" : (" (Workspace " + ws + ")"));
+    var actionStr = isScratchpad
+      ? "hyprctl dispatch 'hl.dsp.workspace.toggle_special(\"scratchpad\")'"
+      : ("hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + other.client.address + "\" })"));
 
     sections.openTasks.push({
-      key: "SUPER + " + ws,
-      title: "Switch to " + oLabel + " (Workspace " + ws + ")",
-      desc: oTitle,
+      key: keyStr,
+      title: titleStr,
+      desc: truncateTitle(other.client.title, other.info.label),
       icon: other.info.icon,
-      badge: "WS " + ws,
-      action: "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + other.client.address + "\" })")
+      badge: badgeStr,
+      action: actionStr
     });
   }
 
@@ -279,7 +291,7 @@ function buildSmartNavigation(activeWin, allClients) {
     });
   }
 
-  // 2. ACTIVE WINDOW ACTIONS & LAYOUT
+  // 3. ACTIVE WINDOW ACTIONS & LAYOUT
   if (activeWin && activeWin.address) {
     var isFloat = activeWin.floating === true;
     var isFull = (activeWin.fullscreen !== undefined && activeWin.fullscreen !== 0);
@@ -340,7 +352,7 @@ function buildSmartNavigation(activeWin, allClients) {
     });
   }
 
-  // 3. ESSENTIAL SYSTEM NAVIGATION TOOLS
+  // 4. ESSENTIAL SYSTEM NAVIGATION TOOLS
   sections.essentialTools.push({
     key: "SUPER + S",
     title: "Toggle Scratchpad",
@@ -419,19 +431,23 @@ function searchAll(query, activeWin, allClients, allCatalog) {
     var cls = String(c.class || "").toLowerCase();
     var lbl = info.label.toLowerCase();
     var ws = String(c.workspace ? c.workspace.name : "");
+    var isScratchpad = (ws === "special:scratchpad" || ws.indexOf("special:") === 0);
 
-    if (t.indexOf(q) !== -1 || cls.indexOf(q) !== -1 || lbl.indexOf(q) !== -1 || ("workspace " + ws).indexOf(q) !== -1) {
+    if (t.indexOf(q) !== -1 || cls.indexOf(q) !== -1 || lbl.indexOf(q) !== -1 ||
+        ("workspace " + ws).indexOf(q) !== -1 || (isScratchpad && "scratchpad".indexOf(q) !== -1)) {
       var isCurrent = (c.address === curAddr);
-      var switchAction = "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + c.address + "\" })");
+      var switchAction = isScratchpad
+        ? "hyprctl dispatch 'hl.dsp.workspace.toggle_special(\"scratchpad\")'"
+        : ("hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + c.address + "\" })"));
       seenActions[switchAction] = true;
 
       results.push({
-        key: isCurrent ? "Active" : ("SUPER + " + ws),
-        title: "Switch to " + info.label + (isCurrent ? " (Current)" : (" (Workspace " + ws + ")")),
+        key: isCurrent ? "Active" : (isScratchpad ? "SUPER + S" : ("SUPER + " + ws)),
+        title: "Switch to " + info.label + (isCurrent ? " (Current)" : (isScratchpad ? " (Scratchpad)" : (" (Workspace " + ws + ")"))),
         desc: truncateTitle(c.title, info.label),
         icon: info.icon,
         category: "window",
-        badge: isCurrent ? "Focused" : ("WS " + ws),
+        badge: isCurrent ? "Focused" : (isScratchpad ? "Scratchpad" : ("WS " + ws)),
         action: switchAction,
         isOpenWindow: true
       });
@@ -601,7 +617,6 @@ function getLeaderboard(statsMap, allCatalog) {
   var catalog = Array.isArray(allCatalog) ? allCatalog : [];
   var map = (statsMap && typeof statsMap === "object") ? statsMap : {};
 
-  // Build catalog lookup map
   var catMap = {};
   for (var i = 0; i < catalog.length; i++) {
     var cItem = catalog[i];
@@ -611,7 +626,6 @@ function getLeaderboard(statsMap, allCatalog) {
   var list = [];
   var seenKeys = {};
 
-  // 1. Process all keys from statsMap so nothing is dropped
   var statKeys = Object.keys(map);
   for (var j = 0; j < statKeys.length; j++) {
     var rawKey = statKeys[j];
@@ -639,7 +653,6 @@ function getLeaderboard(statsMap, allCatalog) {
     });
   }
 
-  // Sort descending by usage count
   list.sort(function(a, b) {
     return b.count - a.count;
   });
