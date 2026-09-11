@@ -596,7 +596,7 @@ function searchAll(query, activeWin, allClients, allCatalog) {
     return b.score - a.score;
   });
 
-  return scoredResults.map(function(s) {
+  return scoredResults.slice(0, 30).map(function(s) {
     return s.item;
   });
 }
@@ -778,7 +778,7 @@ function getLeaderboard(statsMap, allCatalog) {
     return b.count - a.count;
   });
 
-  return list;
+  return list.slice(0, 25);
 }
 
 function getDiscoverNext(statsMap, allCatalog) {

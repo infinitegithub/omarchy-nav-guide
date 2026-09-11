@@ -121,8 +121,8 @@ def get_icon_and_category(desc, key, arg):
 def update_keybindings_state():
     try:
         res = subprocess.run(
-            ["bash", "-c", "source /usr/share/omarchy/bin/omarchy-menu-keybindings && output_binding_records"],
-            capture_output=True, text=True, timeout=8
+            ["bash", "-c", "source /usr/share/omarchy/bin/omarchy-menu-keybindings --print >/dev/null && output_binding_records"],
+            capture_output=True, text=True, timeout=4
         )
         lines = [l for l in res.stdout.splitlines() if l.strip()]
         if not lines:

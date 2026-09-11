@@ -121,11 +121,13 @@ Panel {
     : TipCatalog.allShortcuts
 
   // Refresh windows and stats synchronously
-  function refreshAll() {
+  function refreshAll(forceSubprocess) {
     windowsFile.reload()
     statsFile.reload()
     keybindingsFile.reload()
-    Quickshell.execDetached([root.pluginDir + "/bin/window-state"])
+    if (forceSubprocess || (!root.rawClients || root.rawClients.length === 0)) {
+      Quickshell.execDetached([root.pluginDir + "/bin/window-state"])
+    }
   }
 
   // Background Hyprland socket listener daemon (maintains nav-guide-windows.json & stats)
@@ -210,8 +212,8 @@ Panel {
   }
 
   Timer {
-    interval: 2000
-    running: true
+    interval: 2500
+    running: root.opened || (root.controller && root.controller.open)
     repeat: true
     onTriggered: root.refreshAll()
   }
@@ -721,7 +723,7 @@ Panel {
               }
 
               Repeater {
-                model: root.searchResults
+                model: root.searchQuery !== "" ? root.searchResults : []
                 delegate: SuggestionCard {
                   width: parent.width
                   title: modelData.title || modelData.desc
@@ -927,7 +929,7 @@ Panel {
               }
 
               Repeater {
-                model: root.effectiveCatalog
+                model: (root.currentTab === "all" && root.searchQuery === "") ? root.effectiveCatalog : []
                 delegate: SuggestionCard {
                   width: parent.width
                   title: modelData.desc
@@ -965,7 +967,7 @@ Panel {
               }
 
               Repeater {
-                model: root.leaderboardList
+                model: (root.currentTab === "history" && root.searchQuery === "") ? root.leaderboardList : []
                 delegate: SuggestionCard {
                   width: parent.width
                   title: (index === 0 ? "🥇 " : (index === 1 ? "🥈 " : (index === 2 ? "🥉 " : (index + 1) + ". "))) + modelData.desc
@@ -1002,7 +1004,7 @@ Panel {
               }
 
               Repeater {
-                model: root.recentHistory.slice(0, 15)
+                model: (root.currentTab === "history" && root.searchQuery === "") ? root.recentHistory.slice(0, 15) : []
                 delegate: HistoryRow {
                   width: parent.width
                   title: modelData.desc || modelData.key
@@ -1051,7 +1053,7 @@ Panel {
               }
 
               Repeater {
-                model: root.discoverList
+                model: (root.currentTab === "dojo" && root.searchQuery === "") ? root.discoverList : []
                 delegate: SuggestionCard {
                   width: parent.width
                   title: modelData.desc
