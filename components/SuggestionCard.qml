@@ -118,7 +118,7 @@ Rectangle {
           implicitWidth: badgeLabel.implicitWidth + Style.space(8)
           implicitHeight: Style.space(16)
           radius: Style.space(3)
-          color: root.badgeText.indexOf("Switch") !== -1
+          color: (root.badgeText.indexOf("Switch") !== -1 || root.badgeText.indexOf("WS") !== -1 || root.badgeText === "Focused")
             ? Util.alpha(root.accent, 0.22)
             : Util.alpha(root.foreground, 0.08)
 
@@ -129,7 +129,7 @@ Rectangle {
             font.family: Style.font.family
             font.pixelSize: Style.font.caption - 1
             font.bold: true
-            color: root.badgeText.indexOf("Switch") !== -1 ? root.accent : root.foreground
+            color: (root.badgeText.indexOf("Switch") !== -1 || root.badgeText.indexOf("WS") !== -1 || root.badgeText === "Focused") ? root.accent : root.foreground
           }
         }
 

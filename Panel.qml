@@ -146,6 +146,9 @@ Panel {
         searchField.text = ""
         root.searchQuery = ""
         root.selectedIndex = 0
+        Qt.callLater(function() {
+          searchField.forceActiveFocus()
+        })
       }
     }
   }
@@ -159,6 +162,9 @@ Panel {
       searchField.text = ""
       root.searchQuery = ""
       root.selectedIndex = 0
+      Qt.callLater(function() {
+        searchField.forceActiveFocus()
+      })
     }
   }
 
@@ -196,24 +202,13 @@ Panel {
     TipCatalog.allShortcuts
   )
 
-  // Filtered search list across all shortcuts
-  function filterShortcuts(query) {
-    if (!query) return []
-    var q = query.toLowerCase().trim()
-    var out = []
-    var all = TipCatalog.allShortcuts
-    for (var i = 0; i < all.length; i++) {
-      var item = all[i]
-      if (item.desc.toLowerCase().indexOf(q) !== -1 ||
-          item.key.toLowerCase().indexOf(q) !== -1 ||
-          item.category.toLowerCase().indexOf(q) !== -1) {
-        out.push(item)
-      }
-    }
-    return out
-  }
-
-  readonly property var searchResults: filterShortcuts(root.searchQuery)
+  // Omni Search: queries open windows first, then all shortcuts
+  readonly property var searchResults: NavModel.searchAll(
+    root.searchQuery,
+    root.rawActive,
+    root.rawClients,
+    TipCatalog.allShortcuts
+  )
 
   // Reliable action execution:
   // Dismisses popup panel first, logs the key to stats, then executes after 50ms
@@ -242,6 +237,61 @@ Panel {
     }
   }
 
+  // Active items helper for keyboard selection
+  function getActiveItems() {
+    if (root.searchQuery !== "") {
+      return root.searchResults
+    }
+    if (root.currentTab === "context") {
+      return root.smartNav.openTasks.concat(root.smartNav.currentWindow).concat(root.smartNav.essentialTools)
+    }
+    if (root.currentTab === "all") {
+      return TipCatalog.allShortcuts
+    }
+    if (root.currentTab === "history") {
+      return root.leaderboardList
+    }
+    if (root.currentTab === "dojo") {
+      return root.discoverList
+    }
+    return []
+  }
+
+  function selectNext() {
+    var items = getActiveItems()
+    if (items.length === 0) return
+    root.selectedIndex = Math.min(items.length - 1, root.selectedIndex + 1)
+  }
+
+  function selectPrevious() {
+    var items = getActiveItems()
+    if (items.length === 0) return
+    root.selectedIndex = Math.max(0, root.selectedIndex - 1)
+  }
+
+  function executeSelected() {
+    var items = getActiveItems()
+    if (items.length > 0 && root.selectedIndex >= 0 && root.selectedIndex < items.length) {
+      var item = items[root.selectedIndex]
+      var key = item.key || ""
+      var title = item.title || item.desc || ""
+      var icon = item.icon || "󰌌"
+      var badge = item.badge || item.category || ""
+      root.executeAction(item.action, key, title, icon, badge)
+    }
+  }
+
+  function cycleTab(direction) {
+    var tabs = ["context", "all", "history", "dojo"]
+    var curIdx = tabs.indexOf(root.currentTab)
+    if (curIdx === -1) curIdx = 0
+    var nextIdx = (curIdx + direction + tabs.length) % tabs.length
+    root.currentTab = tabs[nextIdx]
+    searchField.text = ""
+    root.searchQuery = ""
+    root.selectedIndex = 0
+  }
+
   // Bar button
   BarIconButton {
     id: button
@@ -260,65 +310,28 @@ Panel {
     owner: root
     bar: root.bar
     open: root.opened
-    focusTarget: keyCatcher
+    focusTarget: searchField
 
-    contentWidth: panel.fittedContentWidth(Style.space(540))
-    contentHeight: panel.fittedContentHeight(Style.space(660), 740)
+    contentWidth: panel.fittedContentWidth(Style.space(560))
+    contentHeight: panel.fittedContentHeight(Style.space(660), 760)
 
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
       blocked: searchField.activeFocus
       onCloseRequested: root.close()
-
-      onTabRequested: function(direction) {
-        var tabs = ["context", "dojo", "history", "all"]
-        var curIdx = tabs.indexOf(root.currentTab)
-        if (curIdx === -1) curIdx = 0
-        var nextIdx = (curIdx + direction + tabs.length) % tabs.length
-        root.currentTab = tabs[nextIdx]
-        searchField.text = ""
-        root.searchQuery = ""
-        root.selectedIndex = 0
-      }
-
+      onTabRequested: function(direction) { root.cycleTab(direction) }
       onMoveRequested: function(dx, dy) {
-        if (dy > 0) root.selectedIndex += 1
-        else if (dy < 0 && root.selectedIndex > 0) root.selectedIndex -= 1
+        if (dy > 0) root.selectNext()
+        else if (dy < 0) root.selectPrevious()
       }
-
-      onActivateRequested: {
-        if (root.currentTab === "context") {
-          var items = root.smartNav.openTasks.concat(root.smartNav.currentWindow).concat(root.smartNav.quickLaunch)
-          if (root.selectedIndex >= 0 && root.selectedIndex < items.length) {
-            var selected = items[root.selectedIndex]
-            root.executeAction(selected.action, selected.key, selected.title, selected.icon, selected.badge)
-          }
-        }
-      }
-
-      onTextKey: function(t) {
-        if (t === "/") {
-          searchField.forceActiveFocus()
-          return
-        }
-
-        // Accelerator numeric keys 1..9 trigger items instantly
-        var num = parseInt(t)
-        if (!isNaN(num) && num >= 1 && num <= 9 && root.currentTab === "context" && root.searchQuery === "") {
-          var targetIndex = num - 1
-          if (targetIndex < root.smartNav.openTasks.length) {
-            var item = root.smartNav.openTasks[targetIndex]
-            root.executeAction(item.action, item.key, item.title, item.icon, item.badge)
-          }
-        }
-      }
+      onActivateRequested: root.executeSelected()
 
       ColumnLayout {
         anchors.fill: parent
         spacing: Style.space(8)
 
-        // 1. Title Row with Keyboard Navigation Hints
+        // 1. Sleek Top Header Row
         RowLayout {
           Layout.fillWidth: true
           spacing: Style.space(8)
@@ -334,10 +347,10 @@ Panel {
           Item { Layout.fillWidth: true }
 
           Text {
-            text: "Tab to cycle · / to search"
+            text: "Tab to cycle · Esc to close"
             font.family: Style.font.family
             font.pixelSize: Style.font.caption - 1
-            color: Util.alpha(Color.popups.text, 0.5)
+            color: Util.alpha(Color.popups.text, 0.45)
           }
 
           Rectangle {
@@ -366,10 +379,10 @@ Panel {
           }
         }
 
-        // 2. Hero Rank, XP Progress & Daily Streak Banner (Always Visible)
+        // 2. Rank & Daily Progress Banner (Clean, no dojo button)
         Rectangle {
           Layout.fillWidth: true
-          implicitHeight: Style.space(38)
+          implicitHeight: Style.space(36)
           radius: Style.space(6)
           color: Util.alpha(Color.accent, 0.08)
           border.color: Util.alpha(Color.accent, 0.22)
@@ -416,51 +429,21 @@ Panel {
             }
 
             Text {
-              text: "🔥 " + (root.navigatorRank && root.navigatorRank.streak ? root.navigatorRank.streak : (root.rawStats ? root.rawStats.streak : 1)) + "d"
+              text: "🔥 " + (root.navigatorRank && root.navigatorRank.streak ? root.navigatorRank.streak : (root.rawStats ? root.rawStats.streak : 1)) + "d streak"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption - 1
               font.bold: true
               color: Color.urgent
             }
-
-            // Dojo Quick Jump Button
-            Rectangle {
-              implicitWidth: dojoHeroBtn.implicitWidth + Style.space(10)
-              implicitHeight: Style.space(22)
-              radius: Style.space(4)
-              color: root.currentTab === "dojo" ? Util.alpha(Color.accent, 0.3) : Util.alpha(Color.accent, 0.18)
-              border.color: Util.alpha(Color.accent, 0.45)
-              border.width: 1
-
-              Text {
-                id: dojoHeroBtn
-                anchors.centerIn: parent
-                text: "🥋 Dojo ❯"
-                font.family: Style.font.family
-                font.pixelSize: Style.font.caption - 1
-                font.bold: true
-                color: Color.accent
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                  root.currentTab = "dojo"
-                  searchField.text = ""
-                  root.searchQuery = ""
-                }
-              }
-            }
           }
         }
 
-        // 3. Full-Width Segmented Tab Navigation Bar
+        // 3. Segmented Navigation Tabs
         RowLayout {
           Layout.fillWidth: true
           spacing: Style.space(6)
 
-          // 1. Windows Tab
+          // Tab 1: Navigation (Primary)
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: Style.space(28)
@@ -473,7 +456,7 @@ Panel {
 
             Text {
               anchors.centerIn: parent
-              text: "🎯 Windows"
+              text: "🎯 Navigation"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
               font.bold: root.currentTab === "context"
@@ -489,28 +472,30 @@ Panel {
                 root.currentTab = "context"
                 searchField.text = ""
                 root.searchQuery = ""
+                root.selectedIndex = 0
+                searchField.forceActiveFocus()
               }
             }
           }
 
-          // 2. Dojo Practice Tab (Prominently placed as tab 2)
+          // Tab 2: All Commands Catalog
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: Style.space(28)
             radius: Style.space(4)
-            color: root.currentTab === "dojo" && root.searchQuery === ""
+            color: root.currentTab === "all" && root.searchQuery === ""
               ? Util.alpha(Color.accent, 0.22)
               : (tab2Mouse.containsMouse ? Util.alpha(Color.popups.text, 0.09) : Util.alpha(Color.popups.text, 0.05))
-            border.color: root.currentTab === "dojo" && root.searchQuery === "" ? Util.alpha(Color.accent, 0.5) : "transparent"
+            border.color: root.currentTab === "all" && root.searchQuery === "" ? Util.alpha(Color.accent, 0.5) : "transparent"
             border.width: 1
 
             Text {
               anchors.centerIn: parent
-              text: "🥋 Practice Dojo"
+              text: "📋 All Commands"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
-              font.bold: root.currentTab === "dojo"
-              color: root.currentTab === "dojo" && root.searchQuery === "" ? Color.accent : Color.popups.text
+              font.bold: root.currentTab === "all"
+              color: root.currentTab === "all" && root.searchQuery === "" ? Color.accent : Color.popups.text
             }
 
             MouseArea {
@@ -519,14 +504,16 @@ Panel {
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
               onClicked: {
-                root.currentTab = "dojo"
+                root.currentTab = "all"
                 searchField.text = ""
                 root.searchQuery = ""
+                root.selectedIndex = 0
+                searchField.forceActiveFocus()
               }
             }
           }
 
-          // 3. History & Rank Tab
+          // Tab 3: History & Rank
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: Style.space(28)
@@ -555,28 +542,30 @@ Panel {
                 root.currentTab = "history"
                 searchField.text = ""
                 root.searchQuery = ""
+                root.selectedIndex = 0
+                searchField.forceActiveFocus()
               }
             }
           }
 
-          // 4. All Keybinds Tab
+          // Tab 4: Dojo Practice (Isolated here)
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: Style.space(28)
             radius: Style.space(4)
-            color: root.currentTab === "all" && root.searchQuery === ""
+            color: root.currentTab === "dojo" && root.searchQuery === ""
               ? Util.alpha(Color.accent, 0.22)
               : (tab4Mouse.containsMouse ? Util.alpha(Color.popups.text, 0.09) : Util.alpha(Color.popups.text, 0.05))
-            border.color: root.currentTab === "all" && root.searchQuery === "" ? Util.alpha(Color.accent, 0.5) : "transparent"
+            border.color: root.currentTab === "dojo" && root.searchQuery === "" ? Util.alpha(Color.accent, 0.5) : "transparent"
             border.width: 1
 
             Text {
               anchors.centerIn: parent
-              text: "📋 All Keys"
+              text: "🥋 Dojo Practice"
               font.family: Style.font.family
               font.pixelSize: Style.font.caption
-              font.bold: root.currentTab === "all"
-              color: root.currentTab === "all" && root.searchQuery === "" ? Color.accent : Color.popups.text
+              font.bold: root.currentTab === "dojo"
+              color: root.currentTab === "dojo" && root.searchQuery === "" ? Color.accent : Color.popups.text
             }
 
             MouseArea {
@@ -585,39 +574,82 @@ Panel {
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
               onClicked: {
-                root.currentTab = "all"
+                root.currentTab = "dojo"
                 searchField.text = ""
                 root.searchQuery = ""
+                root.selectedIndex = 0
+                searchField.forceActiveFocus()
               }
             }
           }
         }
 
-        // Search Field
+        // 4. Instant Search Bar (Auto-Focused)
         TextField {
           id: searchField
           Layout.fillWidth: true
-          placeholderText: "Search shortcuts (e.g. terminal, split, workspace, float)..."
-          onTextChanged: root.searchQuery = text
-
-          Keys.onEscapePressed: {
-            if (text !== "") {
-              text = ""
-              root.searchQuery = ""
-            } else {
-              root.close()
-            }
+          placeholderText: "Search commands or open windows (e.g. brave, blender, scratchpad, split)..."
+          onTextChanged: {
+            root.searchQuery = text
+            root.selectedIndex = 0
           }
 
-          Keys.onReturnPressed: {
-            if (root.searchResults.length > 0) {
-              var top = root.searchResults[0]
-              root.executeAction(top.action, top.key, top.desc, top.icon, top.category)
+          Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Escape) {
+              if (searchField.text !== "") {
+                searchField.text = ""
+                root.searchQuery = ""
+              } else {
+                root.close()
+              }
+              event.accepted = true
+              return
+            }
+
+            if (event.key === Qt.Key_Tab) {
+              root.cycleTab(1)
+              event.accepted = true
+              return
+            }
+
+            if (event.key === Qt.Key_Backtab) {
+              root.cycleTab(-1)
+              event.accepted = true
+              return
+            }
+
+            if (event.key === Qt.Key_Down) {
+              root.selectNext()
+              event.accepted = true
+              return
+            }
+
+            if (event.key === Qt.Key_Up) {
+              root.selectPrevious()
+              event.accepted = true
+              return
+            }
+
+            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+              root.executeSelected()
+              event.accepted = true
+              return
+            }
+
+            // Quick accelerator 1..9 when search query is empty
+            if (searchField.text === "" && (event.modifiers & (Qt.ControlModifier | Qt.AltModifier))) {
+              var digit = event.key - Qt.Key_1 + 1
+              if (digit >= 1 && digit <= 9 && digit <= root.smartNav.openTasks.length) {
+                var target = root.smartNav.openTasks[digit - 1]
+                root.executeAction(target.action, target.key, target.title, target.icon, target.badge)
+                event.accepted = true
+                return
+              }
             }
           }
         }
 
-        // Scrollable Body
+        // 5. Scrollable Body
         Flickable {
           id: flick
           Layout.fillWidth: true
@@ -633,10 +665,10 @@ Panel {
           Column {
             id: scrollColumn
             width: flick.width
-            spacing: Style.space(6)
+            spacing: Style.space(8)
 
             // -----------------------------------------------------------
-            // VIEW A: SEARCH RESULTS
+            // VIEW A: UNIVERSAL SEARCH RESULTS (OPEN WINDOWS + COMMANDS)
             // -----------------------------------------------------------
             Column {
               visible: root.searchQuery !== ""
@@ -644,22 +676,22 @@ Panel {
               spacing: Style.space(4)
 
               PanelSectionHeader {
-                text: "MATCHING SHORTCUTS (" + root.searchResults.length + ") · PRESS ENTER TO RUN TOP RESULT"
+                text: "MATCHING RESULTS (" + root.searchResults.length + ") · ENTER TO EXECUTE TOP RESULT"
               }
 
               Repeater {
                 model: root.searchResults
                 delegate: SuggestionCard {
                   width: parent.width
-                  title: modelData.desc
-                  desc: "Category: " + modelData.category.toUpperCase()
+                  title: modelData.title || modelData.desc
+                  desc: modelData.desc
                   keyString: modelData.key
                   icon: modelData.icon
                   action: modelData.action
-                  badgeText: modelData.category
+                  badgeText: modelData.badge || modelData.category
                   usageCount: root.getCountForKey(modelData.key)
-                  selected: index === 0
-                  onTriggered: function(cmd) { root.executeAction(cmd, modelData.key, modelData.desc, modelData.icon, modelData.category) }
+                  selected: root.selectedIndex === index
+                  onTriggered: function(cmd) { root.executeAction(cmd, modelData.key, modelData.title || modelData.desc, modelData.icon, modelData.badge || modelData.category) }
                 }
               }
 
@@ -670,7 +702,7 @@ Panel {
 
                 Text {
                   anchors.centerIn: parent
-                  text: "No shortcuts match \"" + root.searchQuery + "\""
+                  text: "No open windows or commands match \"" + root.searchQuery + "\""
                   font.family: Style.font.family
                   font.pixelSize: Style.font.body
                   color: Util.alpha(Color.popups.text, 0.5)
@@ -679,21 +711,86 @@ Panel {
             }
 
             // -----------------------------------------------------------
-            // VIEW B: WINDOW NAVIGATION & CONTROLS (DEFAULT)
+            // VIEW B: NAVIGATION & REAL WINDOWS (PAGE 1 - CLEAN, NO DOJO)
             // -----------------------------------------------------------
             Column {
               visible: root.searchQuery === "" && root.currentTab === "context"
               width: parent.width
               spacing: Style.space(6)
 
-              // 1. Switch to Open Windows (with 1-9 number accelerators)
+              // Active Window Context Banner
+              Rectangle {
+                width: parent.width
+                implicitHeight: activeWinRow.implicitHeight + Style.space(12)
+                radius: Style.space(5)
+                color: Util.alpha(Color.accent, 0.08)
+                border.color: Util.alpha(Color.accent, 0.22)
+                border.width: 1
+
+                RowLayout {
+                  id: activeWinRow
+                  anchors.fill: parent
+                  anchors.leftMargin: Style.space(10)
+                  anchors.rightMargin: Style.space(10)
+                  spacing: Style.space(8)
+
+                  Text {
+                    text: root.activeApp.icon
+                    font.family: Style.font.family
+                    font.pixelSize: Style.font.title
+                    color: Color.accent
+                  }
+
+                  ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Style.space(1)
+
+                    RowLayout {
+                      spacing: Style.space(6)
+                      Text {
+                        text: root.activeApp.label
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.body
+                        font.bold: true
+                        color: Color.popups.text
+                      }
+                      Rectangle {
+                        implicitWidth: wsBadgeText.implicitWidth + Style.space(8)
+                        implicitHeight: Style.space(15)
+                        radius: Style.space(3)
+                        color: Util.alpha(Color.accent, 0.2)
+                        Text {
+                          id: wsBadgeText
+                          anchors.centerIn: parent
+                          text: "Active Workspace " + ((root.rawActive && root.rawActive.workspace) ? root.rawActive.workspace.name : "1")
+                          font.family: Style.font.family
+                          font.pixelSize: Style.font.caption - 2
+                          font.bold: true
+                          color: Color.accent
+                        }
+                      }
+                    }
+
+                    Text {
+                      text: (root.rawActive && root.rawActive.title) ? root.rawActive.title : "Active window"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.caption - 1
+                      color: Util.alpha(Color.popups.text, 0.65)
+                      elide: Text.ElideRight
+                      Layout.fillWidth: true
+                    }
+                  }
+                }
+              }
+
+              // 1. Switch to Open Windows & Tabs (Highest Priority)
               Column {
                 visible: root.smartNav.openTasks.length > 0
                 width: parent.width
                 spacing: Style.space(4)
 
                 PanelSectionHeader {
-                  text: "NAVIGATE BETWEEN OPEN WINDOWS (" + root.smartNav.openTasks.length + ") · PRESS [1-9] TO SWITCH"
+                  text: "SWITCH TO OPEN WINDOWS (" + root.smartNav.openTasks.length + ") · CLICK OR HIT ACCELERATOR"
                 }
 
                 Repeater {
@@ -725,7 +822,7 @@ Panel {
                 spacing: Style.space(4)
 
                 PanelSectionHeader {
-                  text: "WINDOW TILING & LAYOUT"
+                  text: "ACTIVE WINDOW CONTROLS & TILING"
                 }
 
                 Repeater {
@@ -749,17 +846,17 @@ Panel {
                 Item { width: 1; height: Style.space(2) }
               }
 
-              // 3. Quick Launch & Workspaces
+              // 3. Essential Navigation Tools
               Column {
                 width: parent.width
                 spacing: Style.space(4)
 
                 PanelSectionHeader {
-                  text: "QUICK LAUNCH & WORKSPACES"
+                  text: "ESSENTIAL SYSTEM TOOLS"
                 }
 
                 Repeater {
-                  model: root.smartNav.quickLaunch
+                  model: root.smartNav.essentialTools
                   delegate: SuggestionCard {
                     width: parent.width
                     title: modelData.title
@@ -768,112 +865,16 @@ Panel {
                     icon: modelData.icon
                     action: modelData.action
                     badgeText: modelData.badge
+                    selected: root.selectedIndex === (root.smartNav.openTasks.length + root.smartNav.currentWindow.length + index)
                     usageCount: root.getCountForKey(modelData.key)
                     onTriggered: function(cmd) { root.executeAction(cmd, modelData.key, modelData.title, modelData.icon, modelData.badge) }
-                  }
-                }
-              }
-
-              Item { width: 1; height: Style.space(2) }
-              PanelSeparator { width: parent.width }
-              Item { width: 1; height: Style.space(2) }
-
-              // Front-Page Dojo Spotlight Card
-              Rectangle {
-                width: parent.width
-                implicitHeight: dojoSpotCol.implicitHeight + Style.space(20)
-                radius: Style.space(6)
-                color: Util.alpha(Color.accent, 0.08)
-                border.color: Util.alpha(Color.accent, 0.25)
-                border.width: 1
-
-                ColumnLayout {
-                  id: dojoSpotCol
-                  anchors.fill: parent
-                  anchors.margins: Style.space(12)
-                  spacing: Style.space(6)
-
-                  RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Style.space(6)
-
-                    Text {
-                      text: "🥋 MUSCLE MEMORY DOJO"
-                      font.family: Style.font.family
-                      font.pixelSize: Style.font.caption - 1
-                      font.bold: true
-                      color: Color.accent
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    Rectangle {
-                      implicitWidth: spotXp.implicitWidth + Style.space(8)
-                      implicitHeight: Style.space(18)
-                      radius: Style.space(3)
-                      color: Util.alpha(Color.accent, 0.2)
-
-                      Text {
-                        id: spotXp
-                        anchors.centerIn: parent
-                        text: "+25 XP / Drill"
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption - 2
-                        font.bold: true
-                        color: Color.accent
-                      }
-                    }
-                  }
-
-                  Text {
-                    text: "Train your muscle memory for window management & tiling! Complete quick interactive drills under pressure, build your combo multiplier, and level up your Navigator Rank."
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.caption
-                    color: Util.alpha(Color.popups.text, 0.8)
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
-                  }
-
-                  RowLayout {
-                    Layout.fillWidth: true
-
-                    Item { Layout.fillWidth: true }
-
-                    Rectangle {
-                      implicitWidth: enterDojoLabel.implicitWidth + Style.space(16)
-                      implicitHeight: Style.space(26)
-                      radius: Style.space(4)
-                      color: Util.alpha(Color.accent, 0.22)
-                      border.color: Util.alpha(Color.accent, 0.5)
-                      border.width: 1
-
-                      Text {
-                        id: enterDojoLabel
-                        anchors.centerIn: parent
-                        text: "Enter Shortcut Dojo ❯"
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.caption
-                        font.bold: true
-                        color: Color.accent
-                      }
-
-                      MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                          root.currentTab = "dojo"
-                          searchField.text = ""
-                          root.searchQuery = ""
-                        }
-                      }
-                    }
                   }
                 }
               }
             }
 
             // -----------------------------------------------------------
-            // VIEW C: ALL KEYBINDS (BROWSE CATALOG)
+            // VIEW C: ALL COMMANDS (BROWSE CATALOG)
             // -----------------------------------------------------------
             Column {
               visible: root.searchQuery === "" && root.currentTab === "all"
@@ -881,7 +882,7 @@ Panel {
               spacing: Style.space(4)
 
               PanelSectionHeader {
-                text: "ALL NAVIGATION & WINDOW KEYBINDINGS"
+                text: "ALL OMARCHY KEYBINDINGS (" + TipCatalog.allShortcuts.length + ")"
               }
 
               Repeater {
@@ -894,6 +895,7 @@ Panel {
                   icon: modelData.icon
                   action: modelData.action
                   badgeText: modelData.category
+                  selected: root.selectedIndex === index
                   usageCount: root.getCountForKey(modelData.key)
                   onTriggered: function(cmd) { root.executeAction(cmd, modelData.key, modelData.desc, modelData.icon, modelData.category) }
                 }
@@ -931,6 +933,7 @@ Panel {
                   icon: modelData.icon
                   action: modelData.action
                   badgeText: modelData.tier ? modelData.tier.label : "Used"
+                  selected: root.selectedIndex === index
                   usageCount: modelData.count
                   onTriggered: function(cmd) { root.executeAction(cmd, modelData.key, modelData.desc, modelData.icon, modelData.category) }
                 }
@@ -986,49 +989,12 @@ Panel {
             }
 
             // -----------------------------------------------------------
-            // VIEW E: DOJO PRACTICE MODE (TRAINER)
+            // VIEW E: DOJO PRACTICE MODE (TRAINER - ISOLATED IN TAB 4)
             // -----------------------------------------------------------
             Column {
               visible: root.searchQuery === "" && root.currentTab === "dojo"
               width: parent.width
               spacing: Style.space(8)
-
-              // Explanatory Intro Card
-              Rectangle {
-                width: parent.width
-                implicitHeight: dojoGuideCol.implicitHeight + Style.space(18)
-                radius: Style.space(6)
-                color: Util.alpha(Color.accent, 0.08)
-                border.color: Util.alpha(Color.accent, 0.22)
-                border.width: 1
-
-                ColumnLayout {
-                  id: dojoGuideCol
-                  anchors.fill: parent
-                  anchors.margins: Style.space(12)
-                  spacing: Style.space(4)
-
-                  RowLayout {
-                    spacing: Style.space(6)
-                    Text {
-                      text: "🥋 What is the Shortcut Dojo?"
-                      font.family: Style.font.family
-                      font.pixelSize: Style.font.caption
-                      font.bold: true
-                      color: Color.accent
-                    }
-                  }
-
-                  Text {
-                    text: "The Dojo is your interactive reflex trainer for Hyprland shortcuts. Follow the drill prompt below, then hit the shortcut physically on your keyboard OR click '⚡ Practice Now'. Every drill completed grants +XP to level up your Navigator Rank and builds your streak combo!"
-                    font.family: Style.font.family
-                    font.pixelSize: Style.font.caption - 1
-                    color: Util.alpha(Color.popups.text, 0.8)
-                    wrapMode: Text.WordWrap
-                    Layout.fillWidth: true
-                  }
-                }
-              }
 
               DojoCard {
                 width: parent.width
@@ -1053,6 +1019,7 @@ Panel {
                   icon: modelData.icon
                   action: modelData.action
                   badgeText: modelData.count === 0 ? "Untried" : "Practice"
+                  selected: root.selectedIndex === index
                   usageCount: modelData.count
                   onTriggered: function(cmd) { root.executeAction(cmd, modelData.key, modelData.desc, modelData.icon, modelData.category) }
                 }

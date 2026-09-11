@@ -17,17 +17,53 @@ function detectAppInfo(appId, title) {
   if (id.indexOf("chromium") !== -1 || id.indexOf("chrome") !== -1 ||
       id.indexOf("firefox") !== -1 || id.indexOf("brave") !== -1 ||
       id.indexOf("zen") !== -1 || id.indexOf("opera") !== -1 ||
-      id.indexOf("vivaldi") !== -1 || id.indexOf("edge") !== -1) {
-    var name = "Browser";
-    if (id.indexOf("brave") !== -1) name = "Brave";
-    else if (id.indexOf("firefox") !== -1) name = "Firefox";
-    else if (id.indexOf("chrome") !== -1) name = "Chrome";
-    else if (id.indexOf("zen") !== -1) name = "Zen";
+      id.indexOf("vivaldi") !== -1 || id.indexOf("edge") !== -1 ||
+      t.indexOf("brave") !== -1 || t.indexOf("firefox") !== -1) {
+    var bName = "Web Browser";
+    if (id.indexOf("brave") !== -1 || t.indexOf("brave") !== -1) bName = "Brave Browser";
+    else if (id.indexOf("firefox") !== -1 || t.indexOf("firefox") !== -1) bName = "Firefox";
+    else if (id.indexOf("chrome") !== -1) bName = "Google Chrome";
+    else if (id.indexOf("zen") !== -1) bName = "Zen Browser";
     return {
       type: "browser",
-      label: name,
+      label: bName,
       icon: "󰖟",
       appCategory: "web"
+    };
+  }
+
+  // Virtual Machines & Remote Desktop
+  if (id.indexOf("xfreerdp") !== -1 || id.indexOf("rdp") !== -1 ||
+      id.indexOf("remmina") !== -1 || id.indexOf("moonlight") !== -1 ||
+      id.indexOf("sunshine") !== -1 || id.indexOf("virt-manager") !== -1 ||
+      id.indexOf("quickemu") !== -1 || id.indexOf("qemu") !== -1 ||
+      t.indexOf("windows vm") !== -1 || t.indexOf("virtual machine") !== -1 ||
+      t.indexOf("vm") !== -1 || t.indexOf("remote desktop") !== -1) {
+    var vmName = "Remote Desktop";
+    if (t.indexOf("windows") !== -1 || id.indexOf("windows") !== -1) vmName = "Windows VM";
+    return {
+      type: "vm",
+      label: vmName,
+      icon: "󰍹",
+      appCategory: "vm"
+    };
+  }
+
+  // 3D & Creative Design
+  if (id.indexOf("blender") !== -1 || id.indexOf("gimp") !== -1 ||
+      id.indexOf("inkscape") !== -1 || id.indexOf("krita") !== -1 ||
+      id.indexOf("kdenlive") !== -1 || id.indexOf("obs") !== -1 ||
+      id.indexOf("darktable") !== -1 || id.indexOf("figma") !== -1) {
+    var creatName = "Creative App";
+    if (id.indexOf("blender") !== -1) creatName = "Blender 3D";
+    else if (id.indexOf("gimp") !== -1) creatName = "GIMP";
+    else if (id.indexOf("inkscape") !== -1) creatName = "Inkscape";
+    else if (id.indexOf("obs") !== -1) creatName = "OBS Studio";
+    return {
+      type: "creative",
+      label: creatName,
+      icon: "󰽉",
+      appCategory: "creative"
     };
   }
 
@@ -37,9 +73,9 @@ function detectAppInfo(appId, title) {
       id.indexOf("terminal") !== -1 || id.indexOf("wezterm") !== -1 ||
       t.indexOf("tmux") !== -1 || id.indexOf("xterm") !== -1) {
     var term = "Terminal";
-    if (id.indexOf("ghostty") !== -1) term = "Ghostty";
-    else if (id.indexOf("foot") !== -1) term = "Foot";
-    else if (id.indexOf("kitty") !== -1) term = "Kitty";
+    if (id.indexOf("ghostty") !== -1) term = "Ghostty Terminal";
+    else if (id.indexOf("foot") !== -1) term = "Foot Terminal";
+    else if (id.indexOf("kitty") !== -1) term = "Kitty Terminal";
     else if (id.indexOf("alacritty") !== -1) term = "Alacritty";
     return {
       type: "terminal",
@@ -55,15 +91,33 @@ function detectAppInfo(appId, title) {
       id.indexOf("neovim") !== -1 || id.indexOf("zed") !== -1 ||
       id.indexOf("emacs") !== -1 || id.indexOf("cursor") !== -1) {
     var ed = "Code Editor";
-    if (id.indexOf("antigravity") !== -1) ed = "Antigravity";
+    if (id.indexOf("antigravity") !== -1) ed = "Antigravity IDE";
     else if (id.indexOf("code") !== -1) ed = "VS Code";
     else if (id.indexOf("nvim") !== -1 || id.indexOf("neovim") !== -1) ed = "Neovim";
-    else if (id.indexOf("zed") !== -1) ed = "Zed";
+    else if (id.indexOf("zed") !== -1) ed = "Zed Editor";
     return {
       type: "editor",
       label: ed,
       icon: "󰨞",
       appCategory: "dev"
+    };
+  }
+
+  // Communication & Chat
+  if (id.indexOf("discord") !== -1 || id.indexOf("slack") !== -1 ||
+      id.indexOf("telegram") !== -1 || id.indexOf("signal") !== -1 ||
+      id.indexOf("element") !== -1 || id.indexOf("thunderbird") !== -1 ||
+      id.indexOf("omamail") !== -1) {
+    var commName = "Chat";
+    if (id.indexOf("signal") !== -1) commName = "Signal";
+    else if (id.indexOf("discord") !== -1) commName = "Discord";
+    else if (id.indexOf("slack") !== -1) commName = "Slack";
+    else if (id.indexOf("telegram") !== -1) commName = "Telegram";
+    return {
+      type: "chat",
+      label: commName,
+      icon: "󰭹",
+      appCategory: "comm"
     };
   }
 
@@ -73,7 +127,7 @@ function detectAppInfo(appId, title) {
       id.indexOf("nemo") !== -1 || id.indexOf("yazi") !== -1) {
     return {
       type: "filemanager",
-      label: "Files",
+      label: "File Manager",
       icon: "󰉋",
       appCategory: "files"
     };
@@ -82,9 +136,11 @@ function detectAppInfo(appId, title) {
   // Media
   if (id.indexOf("spotify") !== -1 || id.indexOf("vlc") !== -1 ||
       id.indexOf("mpv") !== -1 || id.indexOf("amberol") !== -1) {
+    var med = "Media Player";
+    if (id.indexOf("spotify") !== -1) med = "Spotify";
     return {
       type: "media",
-      label: "Media",
+      label: med,
       icon: "󰝚",
       appCategory: "media"
     };
@@ -117,7 +173,7 @@ function calculateRelativeDirection(curAt, cliAt) {
 function truncateTitle(title, fallback) {
   var t = String(title || "").trim();
   if (!t) return fallback || "Window";
-  if (t.length > 28) return t.substring(0, 25) + "...";
+  if (t.length > 34) return t.substring(0, 31) + "...";
   return t;
 }
 
@@ -130,14 +186,10 @@ function buildSmartNavigation(activeWin, allClients) {
   var clients = Array.isArray(allClients) ? allClients : [];
 
   var sections = {
-    openTasks: [],      // Navigate between open windows and workspaces
-    currentWindow: [],  // Tiling, floating, split, close
-    quickLaunch: []     // Launch new apps or new instances
+    openTasks: [],      // Switch to other open windows and tabs (top priority)
+    currentWindow: [],  // Tiling, floating, split, fullscreen, close active
+    essentialTools: []  // Instant system navigation tools
   };
-
-  var hasTerminal = false;
-  var hasBrowser = false;
-  var hasFileManager = false;
 
   var sameWsOthers = [];
   var otherWsOthers = [];
@@ -145,10 +197,6 @@ function buildSmartNavigation(activeWin, allClients) {
   for (var i = 0; i < clients.length; i++) {
     var c = clients[i];
     var info = detectAppInfo(c.class, c.title);
-
-    if (info.type === "terminal") hasTerminal = true;
-    if (info.type === "browser") hasBrowser = true;
-    if (info.type === "filemanager") hasFileManager = true;
 
     if (c.address === curAddr) continue;
 
@@ -159,7 +207,8 @@ function buildSmartNavigation(activeWin, allClients) {
     }
   }
 
-  // 1. SWITCH TO EXISTING OPEN WINDOWS (TOP PRIORITY)
+  // 1. SWITCH TO EXISTING OPEN WINDOWS & TABS (TOP PRIORITY)
+  // Same workspace neighbors (spatial Left/Right/Up/Down)
   for (var s = 0; s < sameWsOthers.length; s++) {
     var item = sameWsOthers[s];
     var rel = calculateRelativeDirection(curAt, item.client.at);
@@ -172,16 +221,8 @@ function buildSmartNavigation(activeWin, allClients) {
         title: "Switch to " + label + " (" + rel.label + ")",
         desc: title,
         icon: item.info.icon,
-        badge: "Switch (" + rel.label + ")",
+        badge: "Focus " + rel.label,
         action: "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + item.client.address + "\" })")
-      });
-      sections.openTasks.push({
-        key: rel.swapKey,
-        title: "Swap with " + label,
-        desc: "Swap position with " + label,
-        icon: "󰤉",
-        badge: "Swap",
-        action: "hyprctl dispatch " + shellQuote("hl.dsp.window.swap({ direction = \"" + rel.hyprDir + "\" })")
       });
     } else {
       sections.openTasks.push({
@@ -195,6 +236,13 @@ function buildSmartNavigation(activeWin, allClients) {
     }
   }
 
+  otherWsOthers.sort(function(a, b) {
+    var aId = a.client.workspace ? Number(a.client.workspace.id) || 0 : 0;
+    var bId = b.client.workspace ? Number(b.client.workspace.id) || 0 : 0;
+    return aId - bId;
+  });
+
+  // Windows open on other workspaces (Workspace jump + direct address focus)
   for (var o = 0; o < otherWsOthers.length; o++) {
     var other = otherWsOthers[o];
     var ws = String(other.client.workspace ? other.client.workspace.name : "");
@@ -216,7 +264,7 @@ function buildSmartNavigation(activeWin, allClients) {
     sections.openTasks.push({
       key: "ALT + TAB",
       title: "Cycle Next Window",
-      desc: "Fast cycle through open windows",
+      desc: "Fast cycle through all open windows",
       icon: "󰹉",
       badge: "Cycle",
       action: "hyprctl dispatch 'hl.dsp.window.cycle_next()'"
@@ -229,114 +277,191 @@ function buildSmartNavigation(activeWin, allClients) {
       badge: "Workspace",
       action: "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
     });
-  } else {
-    // Only 1 or 0 windows: show fundamental directional movement
-    sections.openTasks.push({
-      key: "SUPER + Left / H",
-      title: "Focus Left Window",
-      desc: "Move focus to window on the left",
-      icon: "󰁍",
-      badge: "Focus",
-      action: "hyprctl dispatch 'hl.dsp.focus({ direction = \"l\" })'"
-    });
-    sections.openTasks.push({
-      key: "SUPER + Right / L",
-      title: "Focus Right Window",
-      desc: "Move focus to window on the right",
-      icon: "󰁔",
-      badge: "Focus",
-      action: "hyprctl dispatch 'hl.dsp.focus({ direction = \"r\" })'"
-    });
-    sections.openTasks.push({
-      key: "ALT + TAB",
-      title: "Cycle Windows",
-      desc: "Cycle between windows",
-      icon: "󰹉",
-      badge: "Cycle",
-      action: "hyprctl dispatch 'hl.dsp.window.cycle_next()'"
-    });
   }
 
-  // 2. WINDOW TILING & LAYOUT CONTROLS
+  // 2. ACTIVE WINDOW ACTIONS & LAYOUT
   if (activeWin && activeWin.address) {
     var isFloat = activeWin.floating === true;
     var isFull = (activeWin.fullscreen !== undefined && activeWin.fullscreen !== 0);
+    var appName = curApp.label || "Window";
+
+    sections.currentWindow.push({
+      key: "SUPER + F",
+      title: isFull ? "Exit Fullscreen" : "Full Screen " + appName,
+      desc: isFull ? "Restore standard tiled workspace layout" : "Strip window borders and top bar for distraction-free view",
+      icon: "󰊓",
+      badge: isFull ? "Fullscreen" : "Tiled",
+      action: "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"fullscreen\" })'"
+    });
+
+    sections.currentWindow.push({
+      key: "SUPER + ALT + F",
+      title: "Full Width (Maximized)",
+      desc: "Fill screen workspace while keeping top status bar visible",
+      icon: "󰹑",
+      badge: "Maximize",
+      action: "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'"
+    });
 
     sections.currentWindow.push({
       key: "SUPER + T",
       title: isFloat ? "Tile Window Back" : "Float Window",
-      desc: isFloat ? "Snap back to auto-tiling grid" : "Float freely over other windows",
+      desc: isFloat ? "Snap window back into auto-tiling grid" : "Float freely over other windows",
       icon: "󰉦",
-      badge: isFloat ? "Floating" : "Tiled",
-      action: "hyprctl dispatch " + shellQuote("hl.dsp.window.float({ action = \"toggle\" })")
+      badge: isFloat ? "Floating" : "Tile",
+      action: "hyprctl dispatch 'hl.dsp.window.float({ action = \"toggle\" })'"
     });
 
     sections.currentWindow.push({
       key: "SUPER + J",
       title: "Toggle Split Orientation",
-      desc: "Switch between horizontal & vertical splits",
+      desc: "Switch next tile between horizontal & vertical",
       icon: "󰤉",
       badge: "Split",
-      action: "hyprctl dispatch " + shellQuote("hl.dsp.layout(\"togglesplit\")")
+      action: "hyprctl dispatch 'hl.dsp.layout(\"togglesplit\")'"
     });
 
     sections.currentWindow.push({
-      key: "SUPER + F",
-      title: isFull ? "Exit Fullscreen" : "Toggle Fullscreen",
-      desc: isFull ? "Restore tiled view" : "Distraction-free fullscreen",
-      icon: "󰊓",
-      badge: "View",
-      action: "hyprctl dispatch " + shellQuote("hl.dsp.window.fullscreen({ mode = \"fullscreen\" })")
+      key: "SUPER + ALT + S",
+      title: "Send to Scratchpad",
+      desc: "Hide active window into background scratchpad",
+      icon: "󰖮",
+      badge: "Scratchpad",
+      action: "hyprctl dispatch 'hl.dsp.window.move({ workspace = \"special:scratchpad\", follow = false })'"
     });
 
     sections.currentWindow.push({
       key: "SUPER + W",
-      title: "Close Focused Window",
-      desc: "Close the currently active window",
+      title: "Close " + appName,
+      desc: "Cleanly close the active window",
       icon: "󰅖",
       badge: "Close",
-      action: "hyprctl dispatch " + shellQuote("hl.dsp.window.close()")
+      action: "hyprctl dispatch 'hl.dsp.window.close()'"
     });
   }
 
-  // 3. QUICK LAUNCH / UNOPENED APPS (OR NEW INSTANCES)
-  sections.quickLaunch.push({
-    key: "SUPER + RETURN",
-    title: hasTerminal ? "Open New Terminal" : "Launch Terminal",
-    desc: hasTerminal ? "Open an additional terminal window" : "Start a new terminal session",
-    icon: "󰞷",
-    badge: hasTerminal ? "New Window" : "Launch",
-    action: "omarchy-launch-terminal"
+  // 3. ESSENTIAL SYSTEM NAVIGATION TOOLS
+  sections.essentialTools.push({
+    key: "SUPER + S",
+    title: "Toggle Scratchpad",
+    desc: "Summon or hide drop-down workspace overlay",
+    icon: "󰖮",
+    badge: "Tool",
+    action: "hyprctl dispatch 'hl.dsp.workspace.toggle_special(\"scratchpad\")'"
   });
 
-  sections.quickLaunch.push({
-    key: "SUPER + SHIFT + RETURN",
-    title: hasBrowser ? "Open New Browser Window" : "Launch Web Browser",
-    desc: hasBrowser ? "Open an additional browser window" : "Launch default browser",
-    icon: "󰖟",
-    badge: hasBrowser ? "New Window" : "Launch",
-    action: "omarchy-launch-browser"
-  });
-
-  sections.quickLaunch.push({
-    key: "SUPER + SHIFT + F",
-    title: "Launch File Manager",
-    desc: "Browse files and directories",
-    icon: "󰉋",
-    badge: "Launch",
-    action: "omarchy-launch-file-manager"
-  });
-
-  sections.quickLaunch.push({
+  sections.essentialTools.push({
     key: "SUPER + SPACE",
-    title: "Open Omarchy Menu",
-    desc: "Application launcher and search",
+    title: "Application Menu",
+    desc: "Search and launch any application or system utility",
     icon: "󰍜",
     badge: "Menu",
     action: "omarchy-menu toggle"
   });
 
+  sections.essentialTools.push({
+    key: "SUPER + RETURN",
+    title: "Launch Terminal",
+    desc: "Open a new terminal window",
+    icon: "󰞷",
+    badge: "Terminal",
+    action: "omarchy-launch-terminal"
+  });
+
+  sections.essentialTools.push({
+    key: "SUPER + SHIFT + F",
+    title: "Open File Manager",
+    desc: "Browse files and directories",
+    icon: "󰉋",
+    badge: "Files",
+    action: "omarchy-launch-file-manager"
+  });
+
+  sections.essentialTools.push({
+    key: "SUPER + CTRL + V",
+    title: "Clipboard History",
+    desc: "Browse and re-paste previous clipboard items",
+    icon: "󰅌",
+    badge: "Clipboard",
+    action: "omarchy-shell shell summon omarchy.clipboard '{}'"
+  });
+
+  sections.essentialTools.push({
+    key: "PRINT",
+    title: "Screenshot Region",
+    desc: "Capture interactive selection to clipboard",
+    icon: "󰹑",
+    badge: "Capture",
+    action: "omarchy-capture-screenshot"
+  });
+
   return sections;
+}
+
+// -------------------------------------------------------------
+// UNIVERSAL SEARCH (OPEN WINDOWS + SYSTEM SHORTCUT CATALOG)
+// -------------------------------------------------------------
+
+function searchAll(query, activeWin, allClients, allCatalog) {
+  if (!query) return [];
+  var q = String(query).toLowerCase().trim();
+  var results = [];
+  var seenActions = {};
+
+  var curAddr = activeWin ? activeWin.address : "";
+  var clients = Array.isArray(allClients) ? allClients : [];
+
+  // 1. Search Open Windows First (High Priority)
+  for (var i = 0; i < clients.length; i++) {
+    var c = clients[i];
+    var info = detectAppInfo(c.class, c.title);
+    var t = String(c.title || "").toLowerCase();
+    var cls = String(c.class || "").toLowerCase();
+    var lbl = info.label.toLowerCase();
+    var ws = String(c.workspace ? c.workspace.name : "");
+
+    if (t.indexOf(q) !== -1 || cls.indexOf(q) !== -1 || lbl.indexOf(q) !== -1 || ("workspace " + ws).indexOf(q) !== -1) {
+      var isCurrent = (c.address === curAddr);
+      var switchAction = "hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + c.address + "\" })");
+      seenActions[switchAction] = true;
+
+      results.push({
+        key: isCurrent ? "Active" : ("SUPER + " + ws),
+        title: "Switch to " + info.label + (isCurrent ? " (Current)" : (" (Workspace " + ws + ")")),
+        desc: truncateTitle(c.title, info.label),
+        icon: info.icon,
+        category: "window",
+        badge: isCurrent ? "Focused" : ("WS " + ws),
+        action: switchAction,
+        isOpenWindow: true
+      });
+    }
+  }
+
+  // 2. Search Shortcut Catalog
+  var catalog = Array.isArray(allCatalog) ? allCatalog : [];
+  for (var j = 0; j < catalog.length; j++) {
+    var item = catalog[j];
+    var d = item.desc.toLowerCase();
+    var k = item.key.toLowerCase();
+    var cat = item.category.toLowerCase();
+
+    if (d.indexOf(q) !== -1 || k.indexOf(q) !== -1 || cat.indexOf(q) !== -1) {
+      if (item.action && seenActions[item.action]) continue;
+      results.push({
+        key: item.key,
+        title: item.desc,
+        desc: "Category: " + item.category.toUpperCase(),
+        icon: item.icon,
+        category: item.category,
+        badge: item.category,
+        action: item.action,
+        isOpenWindow: false
+      });
+    }
+  }
+
+  return results;
 }
 
 // -------------------------------------------------------------
@@ -457,6 +582,7 @@ function synthesizeKeyDesc(key) {
   if (k === "SUPER + ALT + F") return "Full Width";
   if (k === "SUPER + T") return "Toggle Floating";
   if (k === "SUPER + J") return "Toggle Split";
+  if (k === "SUPER + S") return "Toggle Scratchpad";
   if (k === "SUPER + K") return "Navigation Guide HUD";
   if (k === "SUPER + SHIFT + K") return "Classic Keybindings Menu";
   if (k === "SUPER + SHIFT + BACKSPACE") return "Toggle Window Gaps";
@@ -543,7 +669,7 @@ function getDiscoverNext(statsMap, allCatalog) {
     }
   }
 
-  return candidates.slice(0, 4);
+  return candidates.slice(0, 5);
 }
 
 function getDojoDrills() {
@@ -567,6 +693,16 @@ function getDojoDrills() {
       icon: "󰹑",
       difficulty: "Medium",
       xp: 25
+    },
+    {
+      id: "scratchpad",
+      title: "Toggle Scratchpad",
+      prompt: "Summon or dismiss your quick-access floating workspace",
+      targetKey: "SUPER + S",
+      action: "hyprctl dispatch 'hl.dsp.workspace.toggle_special(\"scratchpad\")'",
+      icon: "󰖮",
+      difficulty: "Easy",
+      xp: 15
     },
     {
       id: "gaps",
