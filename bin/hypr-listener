@@ -22,6 +22,7 @@ from stats_manager import record_action
 
 LOCK_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-listener.lock")
 WINDOWS_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-windows.json")
+KEYBINDINGS_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-keybindings.json")
 
 def acquire_lock():
     os.makedirs(os.path.dirname(LOCK_FILE), exist_ok=True)
@@ -82,6 +83,96 @@ def update_window_state(force=False):
     except Exception as e:
         pass
 
+def get_icon_and_category(desc, key, arg):
+    d = (desc or "").lower()
+    k = (key or "").lower()
+    a = (arg or "").lower()
+
+    if any(w in d for w in ["browser", "chrome", "firefox", "brave", "web app", "grok", "whatsapp", "signal", "x post"]):
+        return "󰖟", "apps"
+    if any(w in d for w in ["terminal", "tmux", "herdr"]):
+        return "󰞷", "apps"
+    if any(w in d for w in ["file manager", "nautilus", "cwd"]):
+        return "󰉋", "apps"
+    if any(w in d for w in ["editor", "obsidian", "omawrite", "neovim"]):
+        return "󰈮", "apps"
+    if any(w in d for w in ["music", "audio", "volume", "sound", "mic"]):
+        return "󰕾", "media"
+    if any(w in d for w in ["screenshot", "screenrecording", "color picker", "ocr", "extract text"]):
+        return "󰹉", "tools"
+    if any(w in d for w in ["workspace", "monitor"]):
+        return "󱂬", "workspace"
+    if any(w in d for w in ["window", "fullscreen", "full width", "split", "float", "group", "pop", "shrink", "expand", "swap"]):
+        return "󰉦", "window"
+    if any(w in d for w in ["menu", "launcher", "apps menu", "system menu", "theme"]):
+        return "󰍜", "system"
+    if any(w in d for w in ["lock", "power", "idle", "nightlight", "display", "bluetooth", "wifi", "network", "battery", "bar"]):
+        return "󰐥", "system"
+    if any(w in d for w in ["scratchpad"]):
+        return "󰖮", "workspace"
+    if any(w in d for w in ["notification", "dnd", "silenc"]):
+        return "󰂛", "system"
+    if any(w in d for w in ["copy", "paste", "cut", "clipboard"]):
+        return "󰅌", "tools"
+    if any(w in d for w in ["calculator", "remind", "passwords", "dictation", "zoom"]):
+        return "󰃬", "tools"
+    return "󰌌", "other"
+
+def update_keybindings_state():
+    try:
+        res = subprocess.run(
+            ["bash", "-c", "source /usr/share/omarchy/bin/omarchy-menu-keybindings && output_binding_records"],
+            capture_output=True, text=True, timeout=8
+        )
+        lines = [l for l in res.stdout.splitlines() if l.strip()]
+        if not lines:
+            return
+
+        catalog = []
+        seen = set()
+        for line in lines:
+            parts = line.split("\t")
+            header = parts[0]
+            key_action = header.split("→")
+            key = key_action[0].strip()
+            desc = key_action[1].strip() if len(key_action) > 1 else ""
+            disp = parts[1].strip() if len(parts) > 1 else ""
+            arg = parts[2].strip() if len(parts) > 2 else ""
+
+            combo_id = f"{key}::{desc}"
+            if combo_id in seen:
+                continue
+            seen.add(combo_id)
+
+            action = ""
+            if disp == "exec":
+                action = arg
+            elif disp == "lua":
+                action = f"hyprctl dispatch '{arg}'"
+            elif disp == "sendshortcut":
+                action = f"hyprctl dispatch sendshortcut '{arg}'"
+            elif disp:
+                action = f"hyprctl dispatch {disp} '{arg}'" if arg else f"hyprctl dispatch {disp}"
+
+            icon, category = get_icon_and_category(desc, key, arg)
+            catalog.append({
+                "key": key,
+                "desc": desc,
+                "category": category,
+                "icon": icon,
+                "action": action,
+                "dispatcher": disp,
+                "arg": arg
+            })
+
+        os.makedirs(os.path.dirname(KEYBINDINGS_FILE), exist_ok=True)
+        tmp = KEYBINDINGS_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(catalog, f, indent=2)
+        os.replace(tmp, KEYBINDINGS_FILE)
+    except Exception as e:
+        pass
+
 def main():
     lock_fd = acquire_lock()
     last_event_time = {}
@@ -96,6 +187,7 @@ def main():
 
     # Immediate snapshot on startup
     update_window_state(force=True)
+    update_keybindings_state()
 
     while True:
         sock_path = get_socket_path()
@@ -163,6 +255,10 @@ def main():
                     if should_record("movewindow", cooldown=0.4):
                         record_action("SUPER + SHIFT + Move", "Move / Swap Window", "󰤻", "window")
                     update_window_state()
+
+                elif event == "configreloaded":
+                    update_keybindings_state()
+                    update_window_state(force=True)
 
         except Exception as e:
             time.sleep(2)

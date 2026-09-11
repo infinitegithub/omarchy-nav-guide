@@ -90,10 +90,41 @@ Panel {
     onFileChanged: reload()
   }
 
+  property string keybindingsPath: Quickshell.env("HOME") + "/.local/state/omarchy/nav-guide-keybindings.json"
+  property var liveCatalog: []
+
+  function loadKeybindings(rawText) {
+    if (!rawText) return
+    try {
+      var data = JSON.parse(rawText)
+      if (Array.isArray(data) && data.length > 0) {
+        root.liveCatalog = data
+      }
+    } catch (e) {
+      console.warn("nav-guide: failed to parse keybindings JSON:", e)
+    }
+  }
+
+  FileView {
+    id: keybindingsFile
+    path: root.keybindingsPath
+    watchChanges: true
+    atomicWrites: true
+    printErrors: false
+    onLoaded: root.loadKeybindings(text())
+    onLoadFailed: root.liveCatalog = []
+    onFileChanged: reload()
+  }
+
+  readonly property var effectiveCatalog: (root.liveCatalog && root.liveCatalog.length > 0)
+    ? root.liveCatalog
+    : TipCatalog.allShortcuts
+
   // Refresh windows and stats synchronously
   function refreshAll() {
     windowsFile.reload()
     statsFile.reload()
+    keybindingsFile.reload()
     Quickshell.execDetached([root.pluginDir + "/bin/window-state"])
   }
 
@@ -204,12 +235,12 @@ Panel {
   )
   readonly property var leaderboardList: NavModel.getLeaderboard(
     root.rawStats ? root.rawStats.stats : {},
-    TipCatalog.allShortcuts
+    root.effectiveCatalog
   )
   readonly property var recentHistory: (root.rawStats && Array.isArray(root.rawStats.history)) ? root.rawStats.history : []
   readonly property var discoverList: NavModel.getDiscoverNext(
     root.rawStats ? root.rawStats.stats : {},
-    TipCatalog.allShortcuts
+    root.effectiveCatalog
   )
 
   // Omni Search: queries open windows first, then all shortcuts
@@ -217,7 +248,7 @@ Panel {
     root.searchQuery,
     root.rawActive,
     root.rawClients,
-    TipCatalog.allShortcuts
+    root.effectiveCatalog
   )
 
   // Reliable action execution:
@@ -256,7 +287,7 @@ Panel {
       return root.smartNav.openTasks.concat(root.smartNav.currentWindow).concat(root.smartNav.essentialTools)
     }
     if (root.currentTab === "all") {
-      return TipCatalog.allShortcuts
+      return root.effectiveCatalog
     }
     if (root.currentTab === "history") {
       return root.leaderboardList
@@ -892,11 +923,11 @@ Panel {
               spacing: Style.space(4)
 
               PanelSectionHeader {
-                text: "ALL OMARCHY KEYBINDINGS (" + TipCatalog.allShortcuts.length + ")"
+                text: "ALL OMARCHY KEYBINDINGS (" + root.effectiveCatalog.length + ")"
               }
 
               Repeater {
-                model: TipCatalog.allShortcuts
+                model: root.effectiveCatalog
                 delegate: SuggestionCard {
                   width: parent.width
                   title: modelData.desc

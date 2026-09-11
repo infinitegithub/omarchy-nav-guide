@@ -417,11 +417,16 @@ function buildSmartNavigation(activeWin, allClients) {
 function searchAll(query, activeWin, allClients, allCatalog) {
   if (!query) return [];
   var q = String(query).toLowerCase().trim();
-  var results = [];
+  var scoredResults = [];
   var seenActions = {};
 
   var curAddr = activeWin ? activeWin.address : "";
   var clients = Array.isArray(allClients) ? allClients : [];
+
+  var qNorm = q.replace(/\s*\+\s*/g, "+").replace(/\s+/g, " ");
+  var qWithPlus = q.replace(/\s+/g, "+");
+  var qAlpha = q.replace(/[^a-z0-9]/g, "");
+  var tokens = q.split(/[\s\+]+/).filter(function(t) { return t.length > 0; });
 
   // 1. Search Open Windows First (High Priority)
   for (var i = 0; i < clients.length; i++) {
@@ -433,23 +438,49 @@ function searchAll(query, activeWin, allClients, allCatalog) {
     var ws = String(c.workspace ? c.workspace.name : "");
     var isScratchpad = (ws === "special:scratchpad" || ws.indexOf("special:") === 0);
 
-    if (t.indexOf(q) !== -1 || cls.indexOf(q) !== -1 || lbl.indexOf(q) !== -1 ||
-        ("workspace " + ws).indexOf(q) !== -1 || (isScratchpad && "scratchpad".indexOf(q) !== -1)) {
-      var isCurrent = (c.address === curAddr);
-      var switchAction = isScratchpad
-        ? "hyprctl dispatch 'hl.dsp.workspace.toggle_special(\"scratchpad\")'"
-        : ("hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + c.address + "\" })"));
-      seenActions[switchAction] = true;
+    var isCurrent = (c.address === curAddr);
+    var switchAction = isScratchpad
+      ? "hyprctl dispatch 'hl.dsp.workspace.toggle_special(\"scratchpad\")'"
+      : ("hyprctl dispatch " + shellQuote("hl.dsp.focus({ window = \"address:" + c.address + "\" })"));
 
-      results.push({
-        key: isCurrent ? "Active" : (isScratchpad ? "SUPER + S" : ("SUPER + " + ws)),
-        title: "Switch to " + info.label + (isCurrent ? " (Current)" : (isScratchpad ? " (Scratchpad)" : (" (Workspace " + ws + ")"))),
-        desc: truncateTitle(c.title, info.label),
-        icon: info.icon,
-        category: "window",
-        badge: isCurrent ? "Focused" : (isScratchpad ? "Scratchpad" : ("WS " + ws)),
-        action: switchAction,
-        isOpenWindow: true
+    var score = 0;
+    var combinedWin = (lbl + " " + t + " " + cls + " " + ws).toLowerCase();
+
+    if (lbl === q || t === q) {
+      score += 2600;
+    } else if (lbl.indexOf(q) === 0) {
+      score += 2200;
+    } else if (lbl.indexOf(q) !== -1) {
+      score += 1800;
+    } else if (t.indexOf(q) !== -1) {
+      score += 1400;
+    } else if (qAlpha.length >= 3 && (lbl.replace(/[^a-z0-9]/g, "").indexOf(qAlpha) !== -1 || t.replace(/[^a-z0-9]/g, "").indexOf(qAlpha) !== -1)) {
+      score += 1200;
+    } else if (tokens.length > 0) {
+      var allMatch = true;
+      for (var tk = 0; tk < tokens.length; tk++) {
+        if (combinedWin.indexOf(tokens[tk]) === -1) {
+          allMatch = false;
+          break;
+        }
+      }
+      if (allMatch) score += 900;
+    }
+
+    if (score > 0) {
+      seenActions[switchAction] = true;
+      scoredResults.push({
+        score: score,
+        item: {
+          key: isCurrent ? "Active" : (isScratchpad ? "SUPER + S" : ("SUPER + " + ws)),
+          title: "Switch to " + info.label + (isCurrent ? " (Current)" : (isScratchpad ? " (Scratchpad)" : (" (Workspace " + ws + ")"))),
+          desc: truncateTitle(c.title, info.label),
+          icon: info.icon,
+          category: "window",
+          badge: isCurrent ? "Focused" : (isScratchpad ? "Scratchpad" : ("WS " + ws)),
+          action: switchAction,
+          isOpenWindow: true
+        }
       });
     }
   }
@@ -458,26 +489,116 @@ function searchAll(query, activeWin, allClients, allCatalog) {
   var catalog = Array.isArray(allCatalog) ? allCatalog : [];
   for (var j = 0; j < catalog.length; j++) {
     var item = catalog[j];
-    var d = item.desc.toLowerCase();
-    var k = item.key.toLowerCase();
-    var cat = item.category.toLowerCase();
+    var d = String(item.desc || "").toLowerCase();
+    var k = String(item.key || "").toLowerCase();
+    var cat = String(item.category || "").toLowerCase();
+    var kNorm = k.replace(/\s*\+\s*/g, "+").replace(/\s+/g, " ");
+    var kTokens = k.split(/[\s\+]+/).filter(function(t) { return t.length > 0; });
+    var dTokens = d.split(/[\s\-_]+/).filter(function(t) { return t.length > 0; });
 
-    if (d.indexOf(q) !== -1 || k.indexOf(q) !== -1 || cat.indexOf(q) !== -1) {
+    var itemScore = 0;
+
+    // Exact key match
+    if (kNorm === qNorm || kNorm === qWithPlus) {
+      itemScore += 3000;
+    } else if (kNorm.indexOf(qNorm) !== -1 || kNorm.indexOf(qWithPlus) !== -1) {
+      itemScore += 1500;
+    }
+
+    // Exact or starting title match
+    if (d === q || d.replace(/[^a-z0-9]/g, "") === qAlpha) {
+      itemScore += 2000;
+    } else if (d.indexOf(q) === 0) {
+      itemScore += 1200;
+    } else if (d.indexOf(q) !== -1) {
+      itemScore += 700;
+    }
+
+    // Alpha merged match (e.g. "fullscreen" -> "full screen")
+    if (qAlpha.length >= 3) {
+      var dAlpha = d.replace(/[^a-z0-9]/g, "");
+      if (dAlpha.indexOf(qAlpha) === 0) {
+        itemScore += 900;
+      } else if (dAlpha.indexOf(qAlpha) !== -1) {
+        itemScore += 450;
+      }
+    }
+
+    // Token matching
+    if (tokens.length > 0) {
+      var allTokensMatch = true;
+      var tokenScore = 0;
+      for (var t = 0; t < tokens.length; t++) {
+        var tok = tokens[t];
+        var matchedTok = false;
+
+        // If single char token (like "f", "1", "k")
+        if (tok.length === 1) {
+          if (kTokens.indexOf(tok) !== -1) {
+            matchedTok = true;
+            tokenScore += 350;
+          } else {
+            for (var dt = 0; dt < dTokens.length; dt++) {
+              if (dTokens[dt].indexOf(tok) === 0) {
+                matchedTok = true;
+                tokenScore += 120;
+                break;
+              }
+            }
+          }
+        } else {
+          // Multichar token (e.g. "super", "move", "workspace")
+          if (kNorm.indexOf(tok) !== -1) {
+            matchedTok = true;
+            tokenScore += 250;
+          } else if (d.indexOf(tok) !== -1) {
+            matchedTok = true;
+            tokenScore += 180;
+          } else if (cat.indexOf(tok) !== -1) {
+            matchedTok = true;
+            tokenScore += 80;
+          }
+        }
+
+        if (!matchedTok) {
+          allTokensMatch = false;
+          break;
+        }
+      }
+
+      if (allTokensMatch) {
+        itemScore += tokenScore;
+      }
+    }
+
+    if (itemScore > 0) {
       if (item.action && seenActions[item.action]) continue;
-      results.push({
-        key: item.key,
-        title: item.desc,
-        desc: "Category: " + item.category.toUpperCase(),
-        icon: item.icon,
-        category: item.category,
-        badge: item.category,
-        action: item.action,
-        isOpenWindow: false
+      // Slight bonus for more concise descriptions on direct matches
+      itemScore -= Math.min(80, d.length);
+
+      scoredResults.push({
+        score: itemScore,
+        item: {
+          key: item.key,
+          title: item.desc,
+          desc: "Category: " + item.category.toUpperCase(),
+          icon: item.icon,
+          category: item.category,
+          badge: item.category,
+          action: item.action,
+          isOpenWindow: false
+        }
       });
     }
   }
 
-  return results;
+  scoredResults.sort(function(a, b) {
+    return b.score - a.score;
+  });
+
+  return scoredResults.map(function(s) {
+    return s.item;
+  });
 }
 
 // -------------------------------------------------------------
