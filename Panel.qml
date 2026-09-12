@@ -166,13 +166,8 @@ Panel {
     return item ? (Number(item.count) || 0) : 0
   }
 
-  Process {
-    id: keybindInstaller
-    command: [root.pluginDir + "/bin/register-keybind"]
-  }
-
   Component.onCompleted: {
-    keybindInstaller.running = true
+    Quickshell.execDetached([root.pluginDir + "/bin/register-keybind"])
     refreshAll()
   }
 
