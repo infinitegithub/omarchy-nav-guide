@@ -26,16 +26,42 @@ LOCK_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-listener.lock")
 WINDOWS_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-windows.json")
 KEYBINDINGS_FILE = os.path.expanduser("~/.local/state/omarchy/nav-guide-keybindings.json")
 
+def _get_process_start_time(pid):
+    """Read the process start time from /proc/<pid>/stat field 22.
+    This is used to bind the lock record to a specific process identity,
+    making PID reuse detectable by the unregister script.
+    """
+    try:
+        with open(f"/proc/{pid}/stat", "r") as sf:
+            fields = sf.read().split()
+        # Field index 21 (1-based field 22) is starttime in clock ticks
+        return fields[21]
+    except Exception:
+        return ""
+
 def acquire_lock():
     os.makedirs(os.path.dirname(LOCK_FILE), exist_ok=True)
-    f = open(LOCK_FILE, "w")
+    try:
+        # O_NOFOLLOW: refuse to open if LOCK_FILE is a symlink — prevents
+        # an attacker from redirecting writes to an arbitrary file.
+        # O_CREAT | O_WRONLY: create the file if it doesn't exist.
+        fd = os.open(LOCK_FILE, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    except OSError:
+        # Could not open safely (e.g. symlink in place, or permission error)
+        sys.exit(0)
+    f = os.fdopen(fd, "w")
     try:
         fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        f.write(str(os.getpid()))
+        pid = os.getpid()
+        start_time = _get_process_start_time(pid)
+        # Write PID on line 1, start time on line 2 — unregister-keybind
+        # reads line 1 for the PID and can use line 2 to cross-check identity.
+        f.write(f"{pid}\n{start_time}\n")
         f.flush()
         return f
     except IOError:
-        # Another listener instance is already running
+        # Another listener instance holds the lock
+        f.close()
         sys.exit(0)
 
 def get_socket_path():

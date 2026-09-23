@@ -13,14 +13,21 @@ if [[ -f "$BINDINGS_FILE" ]] && grep -q -F -e "$START_MARKER" "$BINDINGS_FILE"; 
 
   # Terminate background socket listener if active
   if [[ -f "$LOCK_FILE" ]]; then
-    PID=$(cat "$LOCK_FILE" 2>/dev/null || echo "")
-    if [[ -n "$PID" ]] && kill -0 "$PID" 2>/dev/null; then
-      kill "$PID" 2>/dev/null || true
+    # Read only the first line (PID) from the lock file
+    PID=$(head -n1 "$LOCK_FILE" 2>/dev/null | tr -d '[:space:]' || echo "")
+    if [[ -n "$PID" ]] && [[ "$PID" =~ ^[0-9]+$ ]]; then
+      # Verify the PID belongs to our listener before signaling —
+      # prevents accidental termination of an unrelated process that
+      # happens to reuse the same PID.
+      PROC_CMD=$(tr '\0' ' ' < "/proc/${PID}/cmdline" 2>/dev/null || echo "")
+      if [[ "$PROC_CMD" == *"hypr-listener"* ]] && kill -0 "$PID" 2>/dev/null; then
+        kill "$PID" 2>/dev/null || true
+      fi
     fi
     rm -f "$LOCK_FILE" 2>/dev/null || true
-  else
-    pkill -f "nav-guide/bin/hypr-listener" >/dev/null 2>&1 || true
   fi
+  # Note: broad pkill -f fallback intentionally removed — it is unsafe
+  # because it can match and terminate unrelated processes.
 
   if command -v omarchy-notification-send >/dev/null 2>&1; then
     omarchy-notification-send -g "󰞋" "Navigation Guide keybindings restored to defaults" || true
