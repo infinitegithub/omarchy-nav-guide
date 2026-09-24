@@ -101,6 +101,7 @@ Rectangle {
       spacing: Style.space(1)
 
       RowLayout {
+        Layout.fillWidth: true
         spacing: Style.space(6)
 
         Text {
@@ -110,6 +111,10 @@ Rectangle {
           font.bold: true
           color: root.foreground
           elide: Text.ElideRight
+          // ElideRight does nothing until the text has a bounded width.
+          // Without fillWidth the full string is the row's minimum width
+          // and the key badges are pushed off the card.
+          Layout.fillWidth: true
         }
 
         // Primary badge pill (e.g. "Switch", "Window", "System")
