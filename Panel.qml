@@ -167,11 +167,17 @@ Panel {
   }
 
   Component.onCompleted: {
+    root.popupContentParent = keyCatcher.parent
     Quickshell.execDetached([root.pluginDir + "/bin/register-keybind"])
     refreshAll()
   }
 
   function onPanelOpened() {
+    if (root.restoringPopup) {
+      root.refreshAll()
+      Qt.callLater(function() { searchField.forceActiveFocus() })
+      return
+    }
     root.recordAction("SUPER + K", "Navigation Guide HUD", "󰞋", "tools")
     root.refreshAll()
     searchField.text = ""
@@ -200,7 +206,7 @@ Panel {
 
   Timer {
     interval: 2500
-    running: root.opened || (root.controller && root.controller.open)
+    running: root.opened || root.keepOpen || (root.controller && root.controller.open)
     repeat: true
     onTriggered: root.refreshAll()
   }
@@ -245,12 +251,110 @@ Panel {
     root.effectiveCatalog
   )
 
+  // Session-only. The shell popup cannot drop its full-screen click catchers,
+  // so pinning moves this same card onto its own window at the same spot.
+  property bool keepOpen: false
+  property bool restoringPopup: false
+  property Item popupContentParent: null
+
+  function focusedWindowAddress() {
+    var addr = root.rawActive && root.rawActive.address ? String(root.rawActive.address) : ""
+    return /^0x[0-9a-fA-F]+$/.test(addr) ? addr : ""
+  }
+
+  function guideVisible() {
+    return root.keepOpen || root.opened
+  }
+
+  function placeGuideContent(holder) {
+    if (!holder || keyCatcher.parent === holder) return
+    keyCatcher.parent = holder
+  }
+
+  function focusPinnedCard() {
+    if (!root.keepOpen) return
+    restoreFocusTimer.stop()
+    searchField.forceActiveFocus()
+  }
+
+  function pinGuide() {
+    if (root.keepOpen || !root.opened) return
+    restoreFocusTimer.address = root.focusedWindowAddress()
+    root.placeGuideContent(pinnedContent)
+    root.keepOpen = true
+    root.controller.hide()
+    restoreFocusTimer.restart()
+  }
+
+  function unpinGuide() {
+    if (!root.keepOpen) return
+    root.restoringPopup = true
+    restoreFocusTimer.stop()
+    root.keepOpen = false
+    root.placeGuideContent(root.popupContentParent)
+    root.open()
+    Qt.callLater(function() {
+      searchField.forceActiveFocus()
+      root.restoringPopup = false
+    })
+  }
+
+  function close() {
+    root.keepOpen = false
+    restoreFocusTimer.stop()
+    root.restoringPopup = false
+    root.placeGuideContent(root.popupContentParent)
+    if (root.bar && root.bar.activePopout === root) root.bar.releasePopout(root)
+    root.controller.hide()
+  }
+
+  function toggle() {
+    if (root.guideVisible()) root.close()
+    else root.open()
+  }
+
+  // While pinned, opening another bar menu must not dismiss the guide.
+  // The shell still tracks one active popout, so reclaim the indicator
+  // once that other menu closes.
+  function closeForPopoutSwitch() {
+    if (root.keepOpen) return
+    root.popoutSwitchClosing = true
+    root.close()
+    Qt.callLater(function() { root.popoutSwitchClosing = false })
+  }
+
+  function reclaimPinnedPopout() {
+    if (!root.keepOpen || !root.bar) return
+    if (root.bar.activePopout !== null) return
+    Qt.callLater(function() {
+      if (!root.keepOpen || !root.bar) return
+      if (root.bar.activePopout === null) root.bar.requestPopout(root)
+    })
+  }
+
+  Connections {
+    target: root.bar
+    function onActivePopoutChanged() { root.reclaimPinnedPopout() }
+  }
+
+  Timer {
+    id: restoreFocusTimer
+    interval: 100
+    repeat: false
+    property string address: ""
+    onTriggered: {
+      if (!root.keepOpen || address === "") return
+      Quickshell.execDetached(["hyprctl", "dispatch", "focuswindow", "address:" + address])
+    }
+  }
+
   // Reliable action execution:
-  // Dismisses popup panel first, logs the key to stats, then executes after 50ms
+  // Unpinned, dismiss the popup first so its click catchers are gone, then run.
+  // Pinned, the card is already out of the way, so the command leaves it up.
   function executeAction(cmd, key, desc, icon, category) {
     if (key) root.recordAction(key, desc, icon, category)
     if (!cmd) return
-    root.close()
+    if (!root.keepOpen) root.close()
     actionTimer.pendingCmd = cmd
     actionTimer.restart()
   }
@@ -361,6 +465,16 @@ Panel {
         else if (dy < 0) root.selectPrevious()
       }
       onActivateRequested: root.executeSelected()
+
+      MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.AllButtons
+        onPressed: function(mouse) {
+          // Children are hit-tested first. This runs for chrome clicks only,
+          // so a shortcut row still receives the press that launches it.
+          if (root.keepOpen) root.focusPinnedCard()
+          mouse.accepted = false
+        }
 
       ColumnLayout {
         anchors.fill: parent
@@ -627,6 +741,9 @@ Panel {
           onTextChanged: {
             root.searchQuery = text
             root.selectedIndex = 0
+          }
+          onActiveFocusChanged: {
+            if (activeFocus && root.keepOpen) restoreFocusTimer.stop()
           }
 
           Keys.onPressed: function(event) {
@@ -1062,6 +1179,73 @@ Panel {
             }
           }
         }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(8)
+
+          Text {
+            text: "Keep open"
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            color: Color.popups.text
+            Layout.fillWidth: true
+          }
+
+          ToggleSwitch {
+            checked: root.keepOpen
+            foreground: Color.popups.text
+            accent: Color.accent
+            onToggled: {
+              if (root.keepOpen) root.unpinGuide()
+              else root.pinGuide()
+            }
+          }
+        }
+      }
+      }
+    }
+  }
+
+  // Card-sized layer. The shell KeyboardPanel keeps full-screen click catchers
+  // while it is open, including on the other monitors, so the pinned guide
+  // cannot stay inside that popup.
+  PanelWindow {
+    id: pinnedWindow
+    visible: root.keepOpen
+    color: "transparent"
+    screen: panel.screen
+    exclusionMode: ExclusionMode.Ignore
+    WlrLayershell.namespace: "nav-guide-pin-" + (panel.screen ? panel.screen.name : "default")
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: root.keepOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    anchors {
+      top: true
+      left: true
+    }
+    margins {
+      left: panel.cardOrigin.x
+      top: panel.cardOrigin.y
+    }
+    implicitWidth: panel.contentWidth
+    implicitHeight: panel.contentHeight
+
+    BorderSurface {
+      id: pinnedCard
+      anchors.fill: parent
+      color: Color.popups.background
+      borderSpec: panel.borderSpec
+      padding: panel.padding
+      radius: Style.cornerRadius
+
+      Item {
+        id: pinnedContent
+        anchors.fill: parent
+        anchors.topMargin: pinnedCard.contentTopInset
+        anchors.rightMargin: pinnedCard.contentRightInset
+        anchors.bottomMargin: pinnedCard.contentBottomInset
+        anchors.leftMargin: pinnedCard.contentLeftInset
       }
     }
   }
