@@ -1,5 +1,20 @@
 .pragma library
 
+function fallbackAppLabel(appId) {
+  var raw = String(appId || "").trim();
+  if (!raw) return "Application";
+  var parts = raw.split(".");
+  var leaf = "";
+  for (var i = parts.length - 1; i >= 0; i--) {
+    if (parts[i]) {
+      leaf = parts[i];
+      break;
+    }
+  }
+  if (!leaf) return "Application";
+  return leaf.charAt(0).toUpperCase() + leaf.slice(1);
+}
+
 function detectAppInfo(appId, title) {
   var id = String(appId || "").toLowerCase();
   var t = String(title || "").toLowerCase();
@@ -146,10 +161,9 @@ function detectAppInfo(appId, title) {
     };
   }
 
-  var display = appId ? (appId.charAt(0).toUpperCase() + appId.slice(1)) : "Application";
   return {
     type: "general",
-    label: display,
+    label: fallbackAppLabel(appId),
     icon: "󰣆",
     appCategory: "app"
   };
