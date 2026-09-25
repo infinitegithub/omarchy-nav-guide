@@ -49,6 +49,9 @@ test("detectAppInfo correctly identifies common applications", () => {
   assert.equal(detectAppInfo("kitty", "fish").label, "Kitty Terminal");
   assert.equal(detectAppInfo("org.gnome.Nautilus", "Home").label, "File Manager");
   assert.equal(detectAppInfo("blender", "scene.blend").label, "Blender 3D");
+  assert.equal(detectAppInfo("com.onepassword.OnePassword", "1Password").label, "OnePassword");
+  assert.equal(detectAppInfo("logseq", "Notes").label, "Logseq");
+  assert.equal(detectAppInfo("", "just a title").label, "Application");
 });
 
 test("parseKeys splits shortcut strings into clean key tokens", () => {
