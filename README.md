@@ -48,6 +48,7 @@ That's it! The plugin **automatically takes control of `SUPER + K`** upon launch
 | `Enter` | Execute selected action |
 | `Tab` | Cycle views |
 | `Esc` | Close window |
+| Keep open | Leave this panel up. Clicks outside pass through, and Esc still closes it after you click the panel |
 | `SUPER + SHIFT + K` | Classic Omarchy keybindings list |
 
 ---
