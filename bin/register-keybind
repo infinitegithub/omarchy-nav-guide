@@ -21,6 +21,7 @@ if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
 fi
 
 # Check if nav-guide is already registered
+ADDED=0
 if ! grep -q -F -e "$START_MARKER" "$BINDINGS_FILE" && ! grep -q "omarchy-shell nav-guide toggle" "$BINDINGS_FILE"; then
   # Append the isolated configuration block
   cat >> "$BINDINGS_FILE" <<'BLOCK'
@@ -33,10 +34,11 @@ o.bind("SUPER + K", "Super+K Alternative", "omarchy-shell nav-guide toggle")
 o.bind("SUPER + SHIFT + K", "Classic Keybindings Menu", "omarchy-menu-keybindings")
 -- [/nav-guide-keybind]
 BLOCK
+  ADDED=1
 fi
 
-# Always reload Hyprland config dynamically so the binding takes effect immediately
-if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+# Reload Hyprland only when the binding was just added so it takes effect immediately
+if [[ $ADDED -eq 1 && -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
   hyprctl reload >/dev/null 2>&1 || true
 fi
 
@@ -45,7 +47,7 @@ if ! pgrep -f "nav-guide/bin/hypr-listener" >/dev/null 2>&1; then
   setsid python3 "$DIR/hypr-listener" </dev/null >/dev/null 2>&1 &
 fi
 
-# Send a notification to inform the user
-if command -v omarchy-notification-send >/dev/null 2>&1; then
+# Send a notification to inform the user only on initial registration
+if [[ $ADDED -eq 1 ]] && command -v omarchy-notification-send >/dev/null 2>&1; then
   omarchy-notification-send -g "󰞋" "Super+K Alternative active" "Bound to SUPER + K · Classic menu moved to Super+Shift+K" || true
 fi
