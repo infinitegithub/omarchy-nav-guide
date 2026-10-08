@@ -855,6 +855,7 @@ Panel {
                 Text {
                   anchors.centerIn: parent
                   text: "No open windows or commands match \"" + root.searchQuery + "\""
+                  textFormat: Text.PlainText
                   font.family: Style.font.family
                   font.pixelSize: Style.font.body
                   color: Util.alpha(Color.popups.text, 0.5)
@@ -901,6 +902,7 @@ Panel {
                       spacing: Style.space(6)
                       Text {
                         text: "Currently focused: " + root.activeApp.label
+                        textFormat: Text.PlainText
                         font.family: Style.font.family
                         font.pixelSize: Style.font.body
                         font.bold: true
@@ -915,6 +917,7 @@ Panel {
                           id: wsBadgeText
                           anchors.centerIn: parent
                           text: "Workspace " + ((root.rawActive && root.rawActive.workspace) ? root.rawActive.workspace.name : "1")
+                          textFormat: Text.PlainText
                           font.family: Style.font.family
                           font.pixelSize: Style.font.caption - 2
                           font.bold: true
@@ -925,6 +928,7 @@ Panel {
 
                     Text {
                       text: (root.rawActive && root.rawActive.title) ? root.rawActive.title : "Active window"
+                      textFormat: Text.PlainText
                       font.family: Style.font.family
                       font.pixelSize: Style.font.caption - 1
                       color: Util.alpha(Color.popups.text, 0.65)

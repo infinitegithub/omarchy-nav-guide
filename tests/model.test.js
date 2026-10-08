@@ -16,7 +16,9 @@ const fn = new Function("exports", catalogCode + "\n" + modelCode + `
     getMasteryTier,
     getNavigatorRank,
     getLeaderboard,
-    getDiscoverNext
+    getDiscoverNext,
+    sanitizeTitle,
+    truncateTitle
   };
 `);
 
@@ -29,7 +31,9 @@ const {
   getMasteryTier,
   getNavigatorRank,
   getLeaderboard,
-  getDiscoverNext
+  getDiscoverNext,
+  sanitizeTitle,
+  truncateTitle
 } = fn({});
 
 test("TipCatalog loads 200+ unique keybindings", () => {
@@ -105,4 +109,11 @@ test("getLeaderboard ranks executed actions correctly", () => {
   assert.equal(leaderboard[0].count, 25);
   assert.equal(leaderboard[1].key, "SUPER + F");
   assert.equal(leaderboard[1].count, 10);
+});
+
+test("sanitizeTitle and truncateTitle strip HTML tags to prevent RichText injection", () => {
+  assert.equal(sanitizeTitle('<img src="https://a.co/x">'), "");
+  assert.equal(truncateTitle('<img src="https://a.co/x">', "Fallback"), "Fallback");
+  assert.equal(truncateTitle('Terminal <script>alert(1)</script>', "Fallback"), "Terminal");
+  assert.equal(truncateTitle('Safe Window Title', "Fallback"), "Safe Window Title");
 });

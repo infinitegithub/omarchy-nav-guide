@@ -106,6 +106,7 @@ Rectangle {
 
         Text {
           text: root.title
+          textFormat: Text.PlainText
           font.family: Style.font.family
           font.pixelSize: Style.font.body
           font.bold: true
@@ -131,6 +132,7 @@ Rectangle {
             id: badgeLabel
             anchors.centerIn: parent
             text: root.badgeText
+            textFormat: Text.PlainText
             font.family: Style.font.family
             font.pixelSize: Style.font.caption - 1
             font.bold: true
@@ -164,6 +166,7 @@ Rectangle {
       Text {
         visible: root.desc !== "" && root.desc !== root.title
         text: root.desc
+        textFormat: Text.PlainText
         font.family: Style.font.family
         font.pixelSize: Style.font.caption - 1
         color: Util.alpha(root.foreground, 0.65)

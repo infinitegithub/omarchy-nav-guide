@@ -14,6 +14,14 @@ import json
 import fcntl
 import subprocess
 import signal
+import re
+
+TAG_RE = re.compile(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>|<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>|<[^>]*>', re.IGNORECASE)
+
+def sanitize_title(val):
+    if not isinstance(val, str):
+        return val
+    return re.sub(r'\s+', ' ', TAG_RE.sub('', val)).strip()
 
 # Add plugin bin directory to sys.path to import stats_manager logic
 BIN_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -96,6 +104,13 @@ def update_window_state(force=False):
         raw_clients = subprocess.check_output(["hyprctl", "clients", "-j"], timeout=1)
         active = json.loads(raw_active.decode("utf-8", "ignore"))
         clients = json.loads(raw_clients.decode("utf-8", "ignore"))
+
+        if isinstance(active, dict) and "title" in active:
+            active["title"] = sanitize_title(active["title"])
+        if isinstance(clients, list):
+            for c in clients:
+                if isinstance(c, dict) and "title" in c:
+                    c["title"] = sanitize_title(c["title"])
 
         data = {
             "active": active,

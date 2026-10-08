@@ -57,6 +57,7 @@ Rectangle {
     // Title
     Text {
       text: root.title
+      textFormat: Text.PlainText
       font.family: Style.font.family
       font.pixelSize: Style.font.body
       font.bold: true

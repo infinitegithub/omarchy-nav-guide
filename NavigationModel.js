@@ -184,8 +184,20 @@ function calculateRelativeDirection(curAt, cliAt) {
   return null;
 }
 
+function sanitizeTitle(title) {
+  if (!title) return "";
+  // Strip script/style blocks, XML/HTML tags, and control characters to eliminate markup injection
+  return String(title)
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/[\r\n\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function truncateTitle(title, fallback) {
-  var t = String(title || "").trim();
+  var t = sanitizeTitle(title);
   if (!t) return fallback || "Window";
   if (t.length > 34) return t.substring(0, 31) + "...";
   return t;
